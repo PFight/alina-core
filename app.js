@@ -35,36 +35,36 @@ class DbMonTable extends HTMLElement {
                 </div>
             </template>`)
             
-            createChildFromTemplate(this.template, this, this.createRenderer.bind(this));
+        createChildFromTemplate(this.template, this, this.createRenderer.bind(this));
+        this.update();
     }
 
     createRenderer(rootElem) {
         let toggle = true;
-        setInterval(() => toggle = !toggle, 1000);
+        setInterval(() => {
+            toggle = !toggle;
+            this.update();
+        }, 3000);
         
-        this.renderer = renderer(rootElem, (table) => {
-            table.repeatTemplate("#row", this.databases, (row, db) => {
-                row.setContent("@dbname", db.dbname)
-                   .setClass("@countClass", db.lastSample.countClassName)
-                   .setContent("@queryCount", db.lastSample.nbQueries)
-                   .setClass("@dbclass", toggle ? "dbtestclass1" : null)
-                   .setClass("@dbclass2", toggle ? "dbtestclass2" : "")
-                   .repeatTemplate("#query", db.lastSample.topFiveQueries, (query, queryModel) => {
-                        query.setContent("@formatElapsed", queryModel.formatElapsed)
-                             .setContent("@query", queryModel.query)
-                             .setClass("@elapsedClass", queryModel.elapsedClassName);
-                    });
+        this.renderer = renderer(rootElem, (table) => { table
+            .repeat("#row", this.databases, (row, db) => { row                
+                .set("@dbname", db.dbname)
+                .set("@countClass", db.lastSample.countClassName)
+                .set("@queryCount", db.lastSample.nbQueries)
+                .set("@dbclass", toggle ? "dbtestclass1" : null)
+                .set("@dbclass2", toggle ? "dbtestclass2" : "")
+                .repeat("#query", db.lastSample.topFiveQueries, (query, queryModel) => { query
+                    .set("@formatElapsed", queryModel.formatElapsed)
+                    .set("@query", queryModel.query)
+                    .set("@elapsedClass", queryModel.elapsedClassName);
+                });
             });
         });
         return this.renderer;
     }
     
     update() {
-        if (this.renderer) {
-            this.renderer();
-        } else{
-            throw new Exception("Call 'createRenderer' first");
-        }
+        this.renderer();
     }
     
     connectedCallback() {

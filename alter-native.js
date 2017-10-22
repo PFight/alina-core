@@ -45,7 +45,7 @@ class Renderer {
         return this.nextInstance;
     }
 
-    repeatTemplate(templateSelector, modelItems, updateFunc, equals) {
+    repeat(templateSelector, modelItems, updateFunc, equals) {
         let context = this;
         let elem = context.elem;
         
@@ -82,83 +82,94 @@ class Renderer {
         return this.next();
     }
 
-    setContent(stub, value) {    
+    set(stub, value) {    
         let context = this;
-        if (context.stubNodes === undefined) {
-            let nodes = [];
-            let check = (node) => node.nodeType== 3 && node.textContent.indexOf(stub) >= 0;
-            findNodes(context.elem, check, nodes);
-            context.stubNodes = [];
-            for (let node of nodes) {
-                // Split content, to make stub separate node 
-                // and save this node to context.stubNodes
-                let parts = node.textContent.split(stub);
-                let nodeParent = node.parentNode;
-                nodeParent.removeChild(node);
-                for (let i = 0; i < parts.length-1; i++) {
-                    let part = parts[i];
-                    if (part.length > 0) {
-                        nodeParent.appendChild(document.createTextNode(part));
+        if (context.setters === undefined) {
+            context.setters = [];
+            fillSetters(context.elem, stub, context.setters);
+            context.lastValue = stub;
+        } else {        
+            if (context.lastValue != value) {        
+                context.setters.forEach(setter => {
+                    let lastValue = setter(context.lastValue, value);
+                    if (lastValue === undefined) {
+                        lastValue = value;
                     }
-                    let stubNode = document.createTextNode("");
-                    context.stubNodes.push(stubNode);
-                    nodeParent.appendChild(stubNode);
-                }
-                let lastPart = parts[parts.length-1];
-                if (lastPart) {
-                    nodeParent.appendChild(document.createTextNode(lastPart));
-                }
+                    context.lastValue = lastValue;
+                })
             }
-        }
-        
-        if (context.lastValue != value) {        
-            for (let i = 0; i < context.stubNodes.length; i++) {
-                context.stubNodes[i].textContent = value;
-            }
-            context.lastValue = value;
         }
         
         return this.next();
     }
+}
 
-    setClass(stub, value) {    
-        let context = this;
-        if (context.nodes === undefined) {
-            context.nodes = [];
-            let check = (node) => node.className && node.className.indexOf(stub) >= 0;
-            findNodes(context.elem, check, context.nodes);
-            context.lastValue = stub;
+function createIdlSetter(idlName) {
+    return function (oldVal, newVal) {
+        let currentVal = this[idlName];
+        if (typeof(currentVal) == "string") {
+            this[idlName] = currentVal.replace(oldVal, newVal); 
+        } else {
+            this[idlName] = newVal;
         }
-        
-        if (context.lastValue != value) {
-            let preparedValue = (value === null || value === undefined) ?  "" : value;
-            let preparedLastValue = (context.lastValue === null || context.lastValue === undefined) ?  "" : context.lastValue;
-            context.nodes.forEach(node => {
-                let space = "";
-                if (!context.lastValue && node.className[0] != ' ') {
-                    space = " ";
+    }        
+}
+
+var CUSTOM_ATTRIBUTE_SETTERS = {
+    "class": function (oldVal,newVal) {
+        let preparedValue = (!newVal) ?  "" :  newVal + " ";
+        this.className = this.className.replace(oldVal, preparedValue);
+        return preparedValue;
+    },
+    "for": createIdlSetter("htmlFor")
+    
+};
+
+function fillSetters(node, stub, setters) {
+    if (node.nodeType == 3) {
+        let parts = node.textContent.split(stub);
+        if (parts.length > 1) {
+            // Split content, to make stub separate node 
+            // and save this node to context.stubNodes
+            let nodeParent = node.parentNode;
+            nodeParent.removeChild(node);
+            for (let i = 0; i < parts.length-1; i++) {
+                let part = parts[i];
+                if (part.length > 0) {
+                    nodeParent.appendChild(document.createTextNode(part));
                 }
-                node.className = node.className.replace(preparedLastValue, preparedValue + space).trim();
-            });
-            context.lastValue = value;
+                let stubNode = document.createTextNode("");
+                setters.push((oldVal, newVal) =>  stubNode.textContent = newVal);
+                nodeParent.appendChild(stubNode);
+            }
+            let lastPart = parts[parts.length-1];
+            if (lastPart) {
+                nodeParent.appendChild(document.createTextNode(lastPart));
+            }
         }
-        
-        return this.next();
+    }
+    if (node.attributes) {
+        for (let i = 0; i < node.attributes.length; i++) {
+            let attr = node.attributes[i];
+            if (attr.value && attr.value.indexOf(stub) >= 0) {
+                let setter = CUSTOM_ATTRIBUTE_SETTERS[attr.name];
+                if (!setter) {
+                    if (attr.name in node) {
+                        setter = createIdlSetter(attr.name);
+                    } else {
+                        setter = (oldVal, newVal) => attr.value = attr.value.replace(oldVal, newVal);
+                    }
+                }
+                setters.push(setter.bind(node));
+            }
+        }
     }
     
-    update(selector, updateFunc) {
-        
+    for (let i = 0; i < node.childNodes.length; i++) {
+        fillSetters(node.childNodes[i], stub, setters);
     }
 }
 
-function findNodes(currentElem, check, nodes) {
-    if (check(currentElem)) {
-        nodes.push(currentElem);
-    }
-    for (let i = 0; i < currentElem.childNodes.length; i++) {
-        findNodes(currentElem.childNodes[i], check, nodes);
-    }
-}
 
 function renderer(rootElem, renderFunc) {
     let context = new Renderer(rootElem);
