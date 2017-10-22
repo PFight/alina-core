@@ -1,7 +1,9 @@
 
 
-class DbMonTable {
+class DbMonTable extends HTMLElement {
     constructor() {
+        super();
+        
         this.databases = [];        
         // this.template = document.getElementById("component-template");
         this.template = template(`
@@ -32,10 +34,8 @@ class DbMonTable {
                     </table>
                 </div>
             </template>`)
-    }
-    
-    mount(parent) {
-        return createChildFromTemplate(this.template, parent, this.createRenderer.bind(this));
+            
+            createChildFromTemplate(this.template, this, this.createRenderer.bind(this));
     }
 
     createRenderer(rootElem) {
@@ -61,6 +61,10 @@ class DbMonTable {
         }
     }
     
+    connectedCallback() {
+        this.run();
+    }
+    
     run() {
         this.databases = ENV.generateData().toArray();
         this.update();
@@ -68,7 +72,4 @@ class DbMonTable {
         setTimeout(this.run.bind(this), ENV.timeout);
     }
 }
-
-let comp = new DbMonTable();
-comp.mount(document.body);
-comp.run();
+customElements.define('db-mon-table', DbMonTable);
