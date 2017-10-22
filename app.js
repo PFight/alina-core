@@ -46,17 +46,17 @@ class DbMonTable extends HTMLElement {
             this.update();
         }, 3000);
         
-        this.renderer = renderer(rootElem, (table) => { table
-            .repeat("#row", this.databases, (row, db) => { row                
-                .set("@dbname", db.dbname)
-                .set("@countClass", db.lastSample.countClassName)
-                .set("@queryCount", db.lastSample.nbQueries)
-                .set("@dbclass", toggle ? "dbtestclass1" : null)
-                .set("@dbclass2", toggle ? "dbtestclass2" : "")
-                .repeat("#query", db.lastSample.topFiveQueries, (query, queryModel) => { query
-                    .set("@formatElapsed", queryModel.formatElapsed)
-                    .set("@query", queryModel.query)
-                    .set("@elapsedClass", queryModel.elapsedClassName);
+        this.renderer = renderer(rootElem, (table) => {
+            table.repeat("#row", this.databases, (row, db) => {                
+                row.set("@dbname", db.dbname);
+                row.set("@countClass", db.lastSample.countClassName);
+                row.set("@queryCount", db.lastSample.nbQueries);
+                row.set("@dbclass", toggle ? "dbtestclass1" : null);
+                row.set("@dbclass2", toggle ? "dbtestclass2" : "");
+                row.repeat("#query", db.lastSample.topFiveQueries, (query, queryModel) => {
+                    query.set("@formatElapsed", queryModel.formatElapsed);
+                    query.set("@query", queryModel.query);
+                    query.set("@elapsedClass", queryModel.elapsedClassName);
                 });
             });
         });

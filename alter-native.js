@@ -36,18 +36,16 @@ class Renderer {
     
     constructor(elem) {
         this.elem = elem;
+        this.context = {};
     }
     
-    next() {
-        if (!this.nextInstance) {
-            this.nextInstance = new Renderer(this.elem);
-        }
-        return this.nextInstance;
-    }
 
     repeat(templateSelector, modelItems, updateFunc, equals) {
-        let context = this;
-        let elem = context.elem;
+        let context = this.context[templateSelector];
+        if (!context) {
+            context = this.context[templateSelector] = {};
+        }
+        let elem = this.elem;
         
         if (!context.templateElem) {
             context.templateElem = elem.querySelector(templateSelector);        
@@ -79,14 +77,18 @@ class Renderer {
         
         context.oldModelItems = modelItems;
         
-        return this.next();
+        return this;
     }
 
-    set(stub, value) {    
-        let context = this;
+    set(stub, value) {  
+        let context = this.context[stub];
+        if (!context) {
+            context = this.context[stub] = {};
+        }
+    
         if (context.setters === undefined) {
             context.setters = [];
-            fillSetters(context.elem, stub, context.setters);
+            fillSetters(this.elem, stub, context.setters);
             context.lastValue = stub;
         } else {        
             if (context.lastValue != value) {        
@@ -100,7 +102,7 @@ class Renderer {
             }
         }
         
-        return this.next();
+        return this;
     }
 }
 
