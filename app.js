@@ -1,6 +1,6 @@
 
 
-class Component {
+class DbMonTable {
     constructor() {
         this.databases = [];        
         // this.template = document.getElementById("component-template");
@@ -40,11 +40,11 @@ class Component {
 
     createRenderer(rootElem) {
         this.renderer = renderer(rootElem, (table) => {
-            table.repeat("#row", this.databases, (a,b) => a.dbname == b.dbname, (db, row) => {
+            table.repeatTemplate("#row", this.databases, (a,b) => a.dbname == b.dbname, (row, db) => {
                 row.setContent("@dbname", db.dbname)
                    .setClass("@countClass", db.lastSample.countClassName)
                    .setContent("@queryCount", db.lastSample.nbQueries)
-                   .repeat("#query", db.lastSample.topFiveQueries, null, (queryModel, query) => {
+                   .repeatTemplate("#query", db.lastSample.topFiveQueries, null, (query, queryModel) => {
                         query.setContent("@formatElapsed", queryModel.formatElapsed)
                              .setContent("@query", queryModel.query);
                     });
@@ -69,6 +69,6 @@ class Component {
     }
 }
 
-let comp = new Component();
+let comp = new DbMonTable();
 comp.mount(document.body);
 comp.run();

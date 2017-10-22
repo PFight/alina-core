@@ -45,7 +45,7 @@ class Renderer {
         return this.nextInstance;
     }
 
-    repeat(templateSelector, modelItems, equals, updateFunc) {
+    repeatTemplate(templateSelector, modelItems, equals, updateFunc) {
         let context = this;
         let elem = context.elem;
         
@@ -64,7 +64,7 @@ class Renderer {
                 let elem = createChildFromTemplate(context.templateElem, context.containerElem);
                 context.elemContexts[i] = new Renderer(elem);
             }
-            updateFunc(modelItem, context.elemContexts[i]);
+            updateFunc(context.elemContexts[i], modelItem);
         }
         // Remove old
         let firstIndexToRemove = modelItems.length;
