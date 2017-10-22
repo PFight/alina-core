@@ -33,12 +33,10 @@ function compare(a, b, comparer) {
 }
 
 class Renderer {
-    
     constructor(elem) {
         this.elem = elem;
         this.context = {};
-    }
-    
+    }    
 
     repeat(templateSelector, modelItems, updateFunc, equals) {
         let context = this.context[templateSelector];
@@ -92,13 +90,14 @@ class Renderer {
             context.lastValue = stub;
         } else {        
             if (context.lastValue != value) {        
+                let newLastValue = value;
                 context.setters.forEach(setter => {
-                    let lastValue = setter(context.lastValue, value);
-                    if (lastValue === undefined) {
-                        lastValue = value;
-                    }
-                    context.lastValue = lastValue;
-                })
+                    let result = setter(context.lastValue, value);
+                    if (result !== undefined) {
+                        newLastValue = result;
+                    }                    
+                });
+                context.lastValue = newLastValue;
             }
         }
         
