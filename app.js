@@ -40,11 +40,11 @@ class Component {
 
     createRenderer(rootElem) {
         this.renderer = renderer(rootElem, (table) => {
-            table.repeat("#row", this.databases, (a,b) => a.dbname == b.dbname, (db, rowElem, row) => {
+            table.repeat("#row", this.databases, (a,b) => a.dbname == b.dbname, (db, row) => {
                 row.setContent("@dbname", db.dbname)
                    .setClass("@countClass", db.lastSample.countClassName)
                    .setContent("@queryCount", db.lastSample.nbQueries)
-                   .repeat("#query", db.lastSample.topFiveQueries, null, (queryModel, queryElem, query) => {
+                   .repeat("#query", db.lastSample.topFiveQueries, null, (queryModel, query) => {
                         query.setContent("@formatElapsed", queryModel.formatElapsed)
                              .setContent("@query", queryModel.query);
                     });

@@ -51,7 +51,6 @@ class Renderer {
         
         if (!context.templateElem) {
             context.templateElem = elem.querySelector(templateSelector);        
-            context.itemElements = [];
             context.oldModelItems = [];
             context.elemContexts = [];
             context.containerElem = context.templateElem.parentElement;
@@ -62,21 +61,21 @@ class Renderer {
             let modelItem = modelItems[i];
             if (!compare(modelItem, context.oldModelItems[i], equals)) {
                 context.oldModelItems[i] = modelItem;
-                context.itemElements[i] = createChildFromTemplate(context.templateElem, context.containerElem);
-                context.elemContexts[i] = new Renderer(context.itemElements[i]);
+                let elem = createChildFromTemplate(context.templateElem, context.containerElem);
+                context.elemContexts[i] = new Renderer(elem);
             }
-            updateFunc(modelItem, context.itemElements[i], context.elemContexts[i]);
+            updateFunc(modelItem, context.elemContexts[i]);
         }
         // Remove old
         let firstIndexToRemove = modelItems.length;
         for (let i = firstIndexToRemove; i< context.oldModelItems.length; i++) {
-            let elem = context.itemElements[i];
+            let elem = context.elemContexts[i].elem;
             if (elem) {
                 context.containerElem.remove(elem);
             }
         }        
-        context.itemElements.splice(firstIndexToRemove, context.itemElements.length - firstIndexToRemove);
         context.oldModelItems.splice(firstIndexToRemove, context.oldModelItems.length - firstIndexToRemove);
+        context.elemContexts.splice(firstIndexToRemove, context.elemContexts.length - firstIndexToRemove);
         
         context.oldModelItems = modelItems;
         
