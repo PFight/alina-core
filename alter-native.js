@@ -45,7 +45,7 @@ class Renderer {
         return this.nextInstance;
     }
 
-    repeatTemplate(templateSelector, modelItems, equals, updateFunc) {
+    repeatTemplate(templateSelector, modelItems, updateFunc, equals) {
         let context = this;
         let elem = context.elem;
         
@@ -84,16 +84,36 @@ class Renderer {
 
     setContent(stub, value) {    
         let context = this;
-        if (context.nodes === undefined) {
-            context.nodes = [];
+        if (context.stubNodes === undefined) {
+            let nodes = [];
             let check = (node) => node.nodeType== 3 && node.textContent.indexOf(stub) >= 0;
-            findNodes(context.elem, check, context.nodes);
-            context.templates = context.nodes.map(x => x.textContent.split(stub));    
+            findNodes(context.elem, check, nodes);
+            context.stubNodes = [];
+            for (let node of nodes) {
+                // Split content, to make stub separate node 
+                // and save this node to context.stubNodes
+                let parts = node.textContent.split(stub);
+                let nodeParent = node.parentNode;
+                nodeParent.removeChild(node);
+                for (let i = 0; i < parts.length-1; i++) {
+                    let part = parts[i];
+                    if (part.length > 0) {
+                        nodeParent.appendChild(document.createTextNode(part));
+                    }
+                    let stubNode = document.createTextNode("");
+                    context.stubNodes.push(stubNode);
+                    nodeParent.appendChild(stubNode);
+                }
+                let lastPart = parts[parts.length-1];
+                if (lastPart) {
+                    nodeParent.appendChild(document.createTextNode(lastPart));
+                }
+            }
         }
         
         if (context.lastValue != value) {        
-            for (let i = 0; i < context.nodes.length; i++) {
-                context.nodes[i].textContent = context.templates[i].join(value);
+            for (let i = 0; i < context.stubNodes.length; i++) {
+                context.stubNodes[i].textContent = value;
             }
             context.lastValue = value;
         }
@@ -107,19 +127,28 @@ class Renderer {
             context.nodes = [];
             let check = (node) => node.className && node.className.indexOf(stub) >= 0;
             findNodes(context.elem, check, context.nodes);
-            context.templates = context.nodes.map(x => x.className.split(stub));
+            context.lastValue = stub;
         }
         
-        if (context.lastValue != value) {        
-            for (let i = 0; i < context.nodes.length; i++) {
-                context.nodes[i].className = context.templates[i].join(value || "");
-            }
+        if (context.lastValue != value) {
+            let preparedValue = (value === null || value === undefined) ?  "" : value;
+            let preparedLastValue = (context.lastValue === null || context.lastValue === undefined) ?  "" : context.lastValue;
+            context.nodes.forEach(node => {
+                let space = "";
+                if (!context.lastValue && node.className[0] != ' ') {
+                    space = " ";
+                }
+                node.className = node.className.replace(preparedLastValue, preparedValue + space).trim();
+            });
             context.lastValue = value;
         }
         
         return this.next();
     }
-
+    
+    update(selector, updateFunc) {
+        
+    }
 }
 
 function findNodes(currentElem, check, nodes) {

@@ -13,7 +13,7 @@ class DbMonTable extends HTMLElement {
                       <tbody>
                         <template id="row">
                             <tr>
-                                <td class="dbname">@dbname</td>
+                                <td class="dbname @dbclass xx @dbclass2">It is @dbname! Yes @dbname!</td>
                                 <td class="query-count">
                                   <span class="@countClass">
                                     @queryCount
@@ -39,14 +39,20 @@ class DbMonTable extends HTMLElement {
     }
 
     createRenderer(rootElem) {
+        let toggle = true;
+        setInterval(() => toggle = !toggle, 1000);
+        
         this.renderer = renderer(rootElem, (table) => {
-            table.repeatTemplate("#row", this.databases, (a,b) => a.dbname == b.dbname, (row, db) => {
+            table.repeatTemplate("#row", this.databases, (row, db) => {
                 row.setContent("@dbname", db.dbname)
                    .setClass("@countClass", db.lastSample.countClassName)
                    .setContent("@queryCount", db.lastSample.nbQueries)
-                   .repeatTemplate("#query", db.lastSample.topFiveQueries, null, (query, queryModel) => {
+                   .setClass("@dbclass", toggle ? "dbtestclass1" : null)
+                   .setClass("@dbclass2", toggle ? "dbtestclass2" : "")
+                   .repeatTemplate("#query", db.lastSample.topFiveQueries, (query, queryModel) => {
                         query.setContent("@formatElapsed", queryModel.formatElapsed)
-                             .setContent("@query", queryModel.query);
+                             .setContent("@query", queryModel.query)
+                             .setClass("@elapsedClass", queryModel.elapsedClassName);
                     });
             });
         });
@@ -73,3 +79,21 @@ class DbMonTable extends HTMLElement {
     }
 }
 customElements.define('db-mon-table', DbMonTable);
+
+
+class TestWrapper extends HTMLElement {
+    constructor(){
+        super();
+        
+        let inner = this.firstElementChild;
+        this.innerHTML = "<div data-test-wrapper></div>";
+        this.firstElementChild.appendChild(inner);
+        console.info(this.querySelector("#wrapped"));
+    }
+    
+     connectedCallback() {
+        console.info(this.querySelector("#wrapped"));
+    }
+}
+
+customElements.define('test-wrapper', TestWrapper);
