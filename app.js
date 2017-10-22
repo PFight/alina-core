@@ -39,17 +39,17 @@ class Component {
     }
 
     createRenderer(rootElem) {
-        this.renderer = createRenderer(
-            repeat(rootElem, "#row", () => this.databases, (a,b) => a.dbname == b.dbname, (rowElem, db) => [
-                setContent(rowElem, "@dbname", (db) => db.dbname),
-                setClass(rowElem, "@countClass", (db) => db.lastSample.countClassName),
-                setContent(rowElem, "@queryCount", (db) => db.lastSample.nbQueries),
-                repeat(rowElem, "#query", (db) => db.lastSample.topFiveQueries, (a,b) => a && b, (queryElem, query) => [
-                    setContent(queryElem, "@formatElapsed", (query) => query.formatElapsed),
-                    setContent(queryElem, "@query", (query) => query.query)
-                ])
-            ])
-        );
+        this.renderer = renderer(rootElem, (table) => {
+            table.repeat("#row", this.databases, (a,b) => a.dbname == b.dbname, (db, rowElem, row) => {
+                row.setContent("@dbname", db.dbname)
+                   .setClass("@countClass", db.lastSample.countClassName)
+                   .setContent("@queryCount", db.lastSample.nbQueries)
+                   .repeat("#query", db.lastSample.topFiveQueries, null, (queryModel, queryElem, query) => {
+                        query.setContent("@formatElapsed", queryModel.formatElapsed)
+                             .setContent("@query", queryModel.query);
+                    });
+            });
+        });
         return this.renderer;
     }
     
@@ -57,7 +57,7 @@ class Component {
         if (this.renderer) {
             this.renderer();
         } else{
-            throw new Exception("Call 'render' first");
+            throw new Exception("Call 'createRenderer' first");
         }
     }
     

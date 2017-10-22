@@ -32,78 +32,95 @@ function compare(a, b, comparer) {
     return false;
 }
 
-function repeat(rootElem, templateSelector, modelItemsFunc, equals, updateFunc) {
-    let tpl = rootElem.querySelector(templateSelector);
-    let containerElem = tpl.parentElement;
-    let itemElements = [];
-    let oldModelItems = [];
-    let renderers = [];
+class Renderer {
     
-    return (model) => {     
-        let modelItems = modelItemsFunc(model);
+    constructor(elem) {
+        this.elem = elem;
+    }
+    
+    next() {
+        if (!this.nextInstance) {
+            this.nextInstance = new Renderer(this.elem);
+        }
+        return this.nextInstance;
+    }
+
+    repeat(templateSelector, modelItems, equals, updateFunc) {
+        let context = this;
+        let elem = context.elem;
+        
+        if (!context.templateElem) {
+            context.templateElem = elem.querySelector(templateSelector);        
+            context.itemElements = [];
+            context.oldModelItems = [];
+            context.elemContexts = [];
+            context.containerElem = context.templateElem.parentElement;
+        }
+
         // Add new and update existing
         for (let i = 0; i< modelItems.length; i++) {
             let modelItem = modelItems[i];
-            if (!compare(modelItem, oldModelItems[i], equals)) {
-                oldModelItems[i] = modelItem;
-                let elem = createChildFromTemplate(tpl, containerElem);
-                itemElements[i] = elem;
-                let itemRenderers = updateFunc(elem);
-                renderers[i] = (value) => itemRenderers.forEach(x => x(value));
-            } else {
-                renderers[i](modelItem);
+            if (!compare(modelItem, context.oldModelItems[i], equals)) {
+                context.oldModelItems[i] = modelItem;
+                context.itemElements[i] = createChildFromTemplate(context.templateElem, context.containerElem);
+                context.elemContexts[i] = new Renderer(context.itemElements[i]);
             }
+            updateFunc(modelItem, context.itemElements[i], context.elemContexts[i]);
         }
         // Remove old
         let firstIndexToRemove = modelItems.length;
-        for (let i = firstIndexToRemove; i< oldModelItems.length; i++) {
-            let elem = itemElements[i];
+        for (let i = firstIndexToRemove; i< context.oldModelItems.length; i++) {
+            let elem = context.itemElements[i];
             if (elem) {
-                containerElem.remove(elem);
+                context.containerElem.remove(elem);
             }
         }        
-        itemElements.splice(firstIndexToRemove, itemElements.length - firstIndexToRemove);
-        oldModelItems.splice(firstIndexToRemove, oldModelItems.length - firstIndexToRemove);
-        renderers.splice(firstIndexToRemove, renderers.length - firstIndexToRemove);
+        context.itemElements.splice(firstIndexToRemove, context.itemElements.length - firstIndexToRemove);
+        context.oldModelItems.splice(firstIndexToRemove, context.oldModelItems.length - firstIndexToRemove);
         
-        oldItems = modelItems;
-    };
-}
-
-function setContent(rootElem, placeholder, valueFunc) {
-    let check = (node) => node.nodeType== 3 && node.textContent.indexOf(placeholder) >= 0;
-    let nodes = [];
-    findNodes(rootElem, check, nodes);
-    let templates = nodes.map(x => x.textContent.split(placeholder));
-    let lastValue = undefined;
-    
-    return (model) => {
-        let value = valueFunc(model);
-        if (lastValue != value) {        
-            for (let i = 0; i < nodes.length; i++) {
-                nodes[i].textContent = templates[i].join(value);
-            }
-            lastValue = value;
-        }
+        context.oldModelItems = modelItems;
+        
+        return this.next();
     }
-}
 
-function setClass(rootElem, placeholder, valueFunc) {
-    let check = (node) => node.className && node.className.indexOf(placeholder) >= 0;
-    let nodes = [];
-    findNodes(rootElem, check, nodes);
-    let templates = nodes.map(x => x.className.split(placeholder));
-    let lastValue = undefined;
-    
-    return (model) => {
-        let value = valueFunc(model);
-        if (lastValue != value) {        
-            for (let i = 0; i < nodes.length; i++) {
-                nodes[i].className = templates[i].join(value || "");
-            }
-            lastValue = value;
+    setContent(stub, value) {    
+        let context = this;
+        if (context.nodes === undefined) {
+            context.nodes = [];
+            let check = (node) => node.nodeType== 3 && node.textContent.indexOf(stub) >= 0;
+            findNodes(context.elem, check, context.nodes);
+            context.templates = context.nodes.map(x => x.textContent.split(stub));    
         }
+        
+        if (context.lastValue != value) {        
+            for (let i = 0; i < context.nodes.length; i++) {
+                context.nodes[i].textContent = context.templates[i].join(value);
+            }
+            context.lastValue = value;
+        }
+        
+        return this.next();
     }
+
+    setClass(stub, value) {    
+        let context = this;
+        if (context.nodes === undefined) {
+            context.nodes = [];
+            let check = (node) => node.className && node.className.indexOf(stub) >= 0;
+            findNodes(context.elem, check, context.nodes);
+            context.templates = context.nodes.map(x => x.className.split(stub));
+        }
+        
+        if (context.lastValue != value) {        
+            for (let i = 0; i < context.nodes.length; i++) {
+                context.nodes[i].className = context.templates[i].join(value || "");
+            }
+            context.lastValue = value;
+        }
+        
+        return this.next();
+    }
+
 }
 
 function findNodes(currentElem, check, nodes) {
@@ -115,10 +132,9 @@ function findNodes(currentElem, check, nodes) {
     }
 }
 
-function createRenderer() {
+function renderer(rootElem, renderFunc) {
+    let context = new Renderer(rootElem);
     return  () => {
-        for (let i = 0; i < arguments.length; i++) { //>
-            arguments[i]();
-        }
+        renderFunc(context);
     };
 }
