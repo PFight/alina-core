@@ -1,6 +1,3 @@
-function inst() {
-    return null;
-}
 function makeTemplate(str) {
     var elem = document.createElement("div");
     elem.innerHTML = str;
@@ -113,13 +110,13 @@ var Renderer = /** @class */ (function () {
         }
         return this;
     };
-    Renderer.prototype.mount = function (props) {
+    Renderer.prototype.send = function (props) {
         var c = new PropsContainer();
         c.props = props;
         c.renderer = this;
         return c;
     };
-    Renderer.prototype.mountEx = function (selector, component, props) {
+    Renderer.prototype.mount = function (selector, component, props) {
         var context = this.context[selector];
         if (!context) {
             context = this.context[selector] = {};
@@ -136,7 +133,7 @@ var PropsContainer = /** @class */ (function () {
     function PropsContainer() {
     }
     PropsContainer.prototype.into = function (selector, component) {
-        return this.renderer.mountEx(selector, component, this.props);
+        return this.renderer.mount(selector, component, this.props);
     };
     return PropsContainer;
 }());
@@ -160,7 +157,7 @@ var CUSTOM_ATTRIBUTE_SETTERS = {
     "for": createIdlSetter("htmlFor")
 };
 function fillSetters(node, stub, setters) {
-    if (node.nodeType == 3) {
+    if (node.nodeType == Node.TEXT_NODE) {
         var parts = node.textContent.split(stub);
         if (parts.length > 1) {
             // Split content, to make stub separate node 
@@ -208,10 +205,4 @@ function fillSetters(node, stub, setters) {
     for (var i = 0; i < node.childNodes.length; i++) {
         fillSetters(node.childNodes[i], stub, setters);
     }
-}
-function renderer(rootElem, renderFunc) {
-    var context = new Renderer(rootElem);
-    return function (props) {
-        renderFunc(context, props);
-    };
 }

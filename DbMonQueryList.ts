@@ -9,6 +9,7 @@
     this.container = elem.parentElement;
     this.container.removeChild(elem);
     this.insertBefore = prev ? prev.nextSibling : null;
+    this.root = new Renderer(this.container);
   }
 
   template = makeTemplate(`
@@ -20,7 +21,7 @@
   update(props: Query[]) {
     this.root.repeatEx("row", this.template, this.container,
       this.insertBefore, props, (query, queryModel) => {
-        query.mount("td[is='db-mon-query']", DbMonQuery, queryModel)
+        query.send(queryModel).into("td[is='db-mon-query']", DbMonQuery)
     });
   }
 }

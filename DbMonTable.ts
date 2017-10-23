@@ -60,7 +60,7 @@ class DbMonTable extends HTMLElement {
       row.set("@queryCount", db.lastSample.nbQueries);
       row.set("@dbclass", this.toggle ? "dbtestclass1" : null);
       row.set("@dbclass2", this.toggle ? "dbtestclass2" : "");
-      row.mount(db.lastSample.topFiveQueries).into("#queries", DbMonQueryList);
+      row.send(db.lastSample.topFiveQueries).into("#queries", DbMonQueryList);
     });
   }
 

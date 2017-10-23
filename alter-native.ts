@@ -1,5 +1,4 @@
 interface AlterNativeComponent<PropsT> {
-  props?: PropsT;
   update(props: PropsT): void;
 }
 
@@ -136,15 +135,14 @@ class Renderer {
     return this;
   }
 
-  mount<PropsT>(props: PropsT): PropsContainer<PropsT> {
+  send<PropsT>(props: PropsT): PropsContainer<PropsT> {
     let c = new PropsContainer<PropsT>();
     c.props = props;
     c.renderer = this;
     return c;
   }
 
-  mountEx<PropsT>(
-    selector: string,
+  mount<PropsT>(selector: string,
     component: AlterNativeComponentConstructor<PropsT>,
     props: PropsT)
   {
@@ -164,11 +162,13 @@ class PropsContainer<T> {
   props: T;
 
   into(selector: string, component: AlterNativeComponentConstructor<T>) {
-    return this.renderer.mountEx(selector, component, this.props);
+    return this.renderer.mount(selector, component, this.props);
   }
 }
 
-function createIdlSetter(idlName) {
+type ElementSetter = (this: Element, oldVal, newVal) => void;
+
+function createIdlSetter(idlName: string): ElementSetter {
   return function (oldVal, newVal) {
     let currentVal = this[idlName];
     if (typeof (currentVal) == "string") {
@@ -179,7 +179,7 @@ function createIdlSetter(idlName) {
   }
 }
 
-var CUSTOM_ATTRIBUTE_SETTERS = {
+var CUSTOM_ATTRIBUTE_SETTERS: { [attributeName: string]: ElementSetter } = {
   "class": function (oldVal, newVal) {
     let preparedValue = (!newVal) ? "" : newVal + " ";
     this.className = this.className.replace(oldVal, preparedValue);
@@ -189,8 +189,10 @@ var CUSTOM_ATTRIBUTE_SETTERS = {
 
 };
 
-function fillSetters(node, stub, setters) {
-  if (node.nodeType == 3) {
+type ValueSetter<T> = (oldVal: T, newVal: T) => void;
+
+function fillSetters(node: Node, stub: string, setters: ValueSetter<any>[]) {
+  if (node.nodeType == Node.TEXT_NODE) {
     let parts = node.textContent.split(stub);
     if (parts.length > 1) {
       // Split content, to make stub separate node 
@@ -232,12 +234,4 @@ function fillSetters(node, stub, setters) {
   for (let i = 0; i < node.childNodes.length; i++) {
     fillSetters(node.childNodes[i], stub, setters);
   }
-}
-
-
-function renderer<T>(rootElem: HTMLElement, renderFunc: (context: Renderer, props: T) => void): (props:T) => void {
-  let context = new Renderer(rootElem);
-  return (props) => {
-    renderFunc(context, props);
-  };
 }

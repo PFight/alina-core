@@ -6,10 +6,11 @@ var DbMonQueryList = /** @class */ (function () {
         this.container = elem.parentElement;
         this.container.removeChild(elem);
         this.insertBefore = prev ? prev.nextSibling : null;
+        this.root = new Renderer(this.container);
     }
     DbMonQueryList.prototype.update = function (props) {
         this.root.repeatEx("row", this.template, this.container, this.insertBefore, props, function (query, queryModel) {
-            query.mount("td[is='db-mon-query']", DbMonQuery, queryModel);
+            query.send(queryModel).into("td[is='db-mon-query']", DbMonQuery);
         });
     };
     return DbMonQueryList;
