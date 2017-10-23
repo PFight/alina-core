@@ -1,6 +1,6 @@
 class DbMonQuery {
     constructor(elem, props) { 
-        this.elem = replaceFromTempalte(elem, template(`
+        let myRoot = replaceFromTempalte(elem, template(`
             <template>
                 <td class="Query @elapsedClass">
                   @formatElapsed
@@ -12,15 +12,11 @@ class DbMonQuery {
             </template>                
         `));
         
-        this.renderer = renderer(this.elem, (query, props) => {
+        this.update = renderer(myRoot, (query, props) => {
             query.set("@formatElapsed", props.formatElapsed);
             query.set("@query", props.query);
             query.set("@elapsedClass", props.elapsedClassName);
-        });   
-    }
-    
-    update(props) {
-        this.renderer(props);
+        });
     }
 }
 

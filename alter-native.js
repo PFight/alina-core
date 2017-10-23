@@ -117,8 +117,9 @@ class Renderer {
             context = this.context[selector] = {};
             let elem = this.elem.matches(selector) ? this.elem : this.elem.querySelector(selector);
             context.componentInstance = new component(elem, props);
+        } else {
+            context.componentInstance.update(props)
         }
-        context.componentInstance.update(props)
     }
 }
 
