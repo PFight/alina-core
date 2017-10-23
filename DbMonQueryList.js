@@ -1,16 +1,13 @@
 var DbMonQueryList = /** @class */ (function () {
     function DbMonQueryList(elem, props) {
-        this.template = makeTemplate("\n      <td is=\"db-mon-query\"></td>               \n  ");
-        // elem is a stub. Replace it with our elements.
-        var prev = elem.previousSibling;
-        this.container = elem.parentElement;
-        this.container.removeChild(elem);
-        this.insertBefore = prev ? prev.nextSibling : null;
-        this.root = new Renderer(this.container);
+        this.template = makeTemplate("\n      @queryComponent\n  ");
+        this.root = new Renderer(elem);
     }
     DbMonQueryList.prototype.update = function (props) {
-        this.root.repeatEx("row", this.template, this.container, this.insertBefore, props, function (query, queryModel) {
-            query.send(queryModel).into("td[is='db-mon-query']", DbMonQuery);
+        var container = this.root.elem.parentElement;
+        var pos = this.root.elem;
+        this.root.repeatEx("row", this.template, container, pos, props, function (query, queryModel) {
+            query.send(queryModel).into("@queryComponent", DbMonQuery);
         });
     };
     return DbMonQueryList;

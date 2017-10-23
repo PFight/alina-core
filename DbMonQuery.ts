@@ -4,7 +4,7 @@
   elapsedClassName: string;
 }
 
-class DbMonQuery implements AlterNativeComponent<Query> {
+class DbMonQuery implements AltComponent<Query> {
   root: Renderer;
 
   constructor(elem, props) {

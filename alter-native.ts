@@ -1,9 +1,9 @@
-interface AlterNativeComponent<PropsT> {
+interface AltComponent<PropsT> {
   update(props: PropsT): void;
 }
 
-interface AlterNativeComponentConstructor<PropsT> {
-  new(elem: HTMLElement, props: PropsT): AlterNativeComponent<PropsT>;
+interface AltComponentConstructor<PropsT> {
+  new(elem: HTMLElement, props: PropsT): AltComponent<PropsT>;
 }
 
 
@@ -14,8 +14,11 @@ function makeTemplate(str: string): HTMLTemplateElement {
   return elem;
 }
 
-function instantiateTemplate(templateElem) {
-  return templateElem.content ? templateElem.content.querySelector("*").cloneNode(true) : templateElem.firstElementChild.cloneNode(true);
+function instantiateTemplate(templateElem: HTMLTemplateElement) {
+  return templateElem.content ?
+    (templateElem.content.firstElementChild || templateElem.content.firstChild).cloneNode(true)
+    :
+    (templateElem.firstElementChild || templateElem.firstChild).cloneNode(true);
 }
 
 function replaceFromTempalte(elemToReplace, templateElem) {
@@ -143,13 +146,19 @@ class Renderer {
   }
 
   mount<PropsT>(selector: string,
-    component: AlterNativeComponentConstructor<PropsT>,
+    component: AltComponentConstructor<PropsT>,
     props: PropsT)
   {
     let context = this.context[selector];
     if (!context) {
       context = this.context[selector] = {};
-      let elem = this.elem.matches(selector) ? this.elem : this.elem.querySelector(selector);
+      let elem: Element;
+      try {
+        elem = this.elem.matches(selector) ? this.elem : this.elem.querySelector(selector);
+      } catch { }
+      if (!elem) {
+        elem = findTextNode(selector, this.elem) as Element;
+      }
       context.componentInstance = new component(elem as HTMLElement, props);
     } else {
       context.componentInstance.update(props)
@@ -161,7 +170,7 @@ class PropsContainer<T> {
   renderer: Renderer;
   props: T;
 
-  into(selector: string, component: AlterNativeComponentConstructor<T>) {
+  into(selector: string, component: AltComponentConstructor<T>) {
     return this.renderer.mount(selector, component, this.props);
   }
 }
@@ -192,7 +201,7 @@ var CUSTOM_ATTRIBUTE_SETTERS: { [attributeName: string]: ElementSetter } = {
 type ValueSetter<T> = (oldVal: T, newVal: T) => void;
 
 function fillSetters(node: Node, stub: string, setters: ValueSetter<any>[]) {
-  if (node.nodeType == Node.TEXT_NODE) {
+  if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
     let parts = node.textContent.split(stub);
     if (parts.length > 1) {
       // Split content, to make stub separate node 
@@ -233,5 +242,19 @@ function fillSetters(node: Node, stub: string, setters: ValueSetter<any>[]) {
 
   for (let i = 0; i < node.childNodes.length; i++) {
     fillSetters(node.childNodes[i], stub, setters);
+  }
+}
+
+function findTextNode(searchText: string, current: Node): Node | undefined {
+  if (current.nodeType == Node.TEXT_NODE || current.nodeType == Node.COMMENT_NODE) {
+    if (current.textContent && current.textContent.indexOf(searchText) >= 0) {
+      return current;
+    }
+  }
+  for (let i = 0; i < current.childNodes.length; i++) {
+    let result = findTextNode(searchText, current.childNodes[i]);
+    if (result) {
+      return result;
+    }
   }
 }

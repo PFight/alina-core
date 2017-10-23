@@ -1,25 +1,19 @@
-﻿class DbMonQueryList implements AlterNativeComponent<Query[]> {
+﻿class DbMonQueryList implements AltComponent<Query[]> {
   root: Renderer;
-  container: HTMLElement;
-  insertBefore: HTMLElement | null;
 
   constructor(elem, props) {
-    // elem is a stub. Replace it with our elements.
-    let prev = elem.previousSibling;
-    this.container = elem.parentElement;
-    this.container.removeChild(elem);
-    this.insertBefore = prev ? prev.nextSibling : null;
-    this.root = new Renderer(this.container);
+    this.root = new Renderer(elem);
   }
 
   template = makeTemplate(`
-      <td is="db-mon-query"></td>               
+      @queryComponent
   `);
 
   update(props: Query[]) {
-    this.root.repeatEx("row", this.template, this.container,
-      this.insertBefore, props, (query, queryModel) => {
-        query.send(queryModel).into("td[is='db-mon-query']", DbMonQuery)
+    let container = this.root.elem.parentElement;
+    let pos = this.root.elem;
+    this.root.repeatEx("row", this.template, container, pos, props, (query, queryModel) => {
+        query.send(queryModel).into("@queryComponent", DbMonQuery)
     });
   }
 }

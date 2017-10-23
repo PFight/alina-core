@@ -5,7 +5,10 @@ function makeTemplate(str) {
     return elem;
 }
 function instantiateTemplate(templateElem) {
-    return templateElem.content ? templateElem.content.querySelector("*").cloneNode(true) : templateElem.firstElementChild.cloneNode(true);
+    return templateElem.content ?
+        (templateElem.content.firstElementChild || templateElem.content.firstChild).cloneNode(true)
+        :
+            (templateElem.firstElementChild || templateElem.firstChild).cloneNode(true);
 }
 function replaceFromTempalte(elemToReplace, templateElem) {
     var elem = instantiateTemplate(templateElem);
@@ -120,7 +123,14 @@ var Renderer = /** @class */ (function () {
         var context = this.context[selector];
         if (!context) {
             context = this.context[selector] = {};
-            var elem = this.elem.matches(selector) ? this.elem : this.elem.querySelector(selector);
+            var elem = void 0;
+            try {
+                elem = this.elem.matches(selector) ? this.elem : this.elem.querySelector(selector);
+            }
+            catch (_a) { }
+            if (!elem) {
+                elem = findTextNode(selector, this.elem);
+            }
             context.componentInstance = new component(elem, props);
         }
         else {
@@ -157,7 +167,7 @@ var CUSTOM_ATTRIBUTE_SETTERS = {
     "for": createIdlSetter("htmlFor")
 };
 function fillSetters(node, stub, setters) {
-    if (node.nodeType == Node.TEXT_NODE) {
+    if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
         var parts = node.textContent.split(stub);
         if (parts.length > 1) {
             // Split content, to make stub separate node 
@@ -204,5 +214,18 @@ function fillSetters(node, stub, setters) {
     }
     for (var i = 0; i < node.childNodes.length; i++) {
         fillSetters(node.childNodes[i], stub, setters);
+    }
+}
+function findTextNode(searchText, current) {
+    if (current.nodeType == Node.TEXT_NODE || current.nodeType == Node.COMMENT_NODE) {
+        if (current.textContent && current.textContent.indexOf(searchText) >= 0) {
+            return current;
+        }
+    }
+    for (var i = 0; i < current.childNodes.length; i++) {
+        var result = findTextNode(searchText, current.childNodes[i]);
+        if (result) {
+            return result;
+        }
     }
 }

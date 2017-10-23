@@ -42,7 +42,7 @@ class DbMonTable extends HTMLElement {
                         @queryCount
                       </span>
                     </td>
-                    <td id="queries"></td>
+                    <!-- @queries -->
                 </tr>                  
             </template>
           </tbody>
@@ -58,7 +58,7 @@ class DbMonTable extends HTMLElement {
       row.set("@queryCount", db.lastSample.nbQueries);
       row.set("@dbclass", this.toggle ? "dbtestclass1" : null);
       row.set("@dbclass2", this.toggle ? "dbtestclass2" : "");
-      row.send(db.lastSample.topFiveQueries).into("#queries", DbMonQueryList);
+      row.send(db.lastSample.topFiveQueries).into("@queries", DbMonQueryList);
     });
   }
 
