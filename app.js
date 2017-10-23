@@ -20,6 +20,28 @@ class DbMonQuery {
     }
 }
 
+class DbMonQueryList {
+    constructor(elem, props) { 
+        let tpl = template(`
+            <template>
+                <td is="db-mon-query"></td>
+            </template>                
+        `);
+        
+        // elem is a stub. Replace it with our elements.
+        let prev = elem.previousSibling;
+        let container = elem.parentElement;
+        container.removeChild(elem);
+        let insertBefore = prev ? prev.nextSibling : null;
+        
+        this.update = renderer(elem, (row, props) => {
+            row.repeatEx("row", tpl, container, insertBefore, props, (query, queryModel) => {
+                query.mount("td[is='db-mon-query']", DbMonQuery, queryModel)
+            });
+        });
+    }
+}
+
 class DbMonTable extends HTMLElement {
     constructor() {
         super();
@@ -40,9 +62,7 @@ class DbMonTable extends HTMLElement {
                                     @queryCount
                                   </span>
                                 </td>
-                                <template id="query" >
-                                    <td is="db-mon-query"></td>
-                                </template>
+                                <td id="queries"></td>
                             </tr>                  
                         </template>
                       </tbody>
@@ -69,9 +89,7 @@ class DbMonTable extends HTMLElement {
                 row.set("@queryCount", db.lastSample.nbQueries);
                 row.set("@dbclass", toggle ? "dbtestclass1" : null);
                 row.set("@dbclass2", toggle ? "dbtestclass2" : "");
-                row.repeat("#query", db.lastSample.topFiveQueries, (query, queryModel) => {
-                    query.mount("td[is='db-mon-query']", DbMonQuery, queryModel)
-                });
+                row.mount("#queries", DbMonQueryList, db.lastSample.topFiveQueries);
             });
         });
         return this.renderer;

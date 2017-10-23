@@ -1,7 +1,7 @@
 function template(str) {
     let elem = document.createElement("div");
     elem.innerHTML = str;
-    document.body.appendChild(elem);
+    // document.body.appendChild(elem);
     return elem.firstElementChild;
 }
 
@@ -46,17 +46,17 @@ class Renderer {
     }    
 
     repeat(templateSelector, modelItems, updateFunc, equals) {
-        let context = this.context[templateSelector];
+        let template = this.elem.querySelector(templateSelector);
+        let container = template.parentElement;
+        return this.repeatEx(templateSelector, template, container, null, modelItems, updateFunc, equals);
+    }
+    
+    repeatEx(key, template, container, insertBefore, modelItems, updateFunc, equals) {      
+        let context = this.context[key];
         if (!context) {
-            context = this.context[templateSelector] = {};
-        }
-        let elem = this.elem;
-        
-        if (!context.templateElem) {
-            context.templateElem = elem.querySelector(templateSelector);        
+            context = this.context[key] = {}    
             context.oldModelItems = [];
             context.elemContexts = [];
-            context.containerElem = context.templateElem.parentElement;
         }
 
         // Add new and update existing
@@ -64,7 +64,12 @@ class Renderer {
             let modelItem = modelItems[i];
             if (!compare(modelItem, context.oldModelItems[i], equals)) {
                 context.oldModelItems[i] = modelItem;
-                let elem = createChildFromTemplate(context.templateElem, context.containerElem);
+                let elem = instantiateTemplate(template);
+                if (insertBefore) {
+                    container.insertBefore(elem, insertBefore);
+                } else {
+                    container.appendChild(elem);
+                }
                 context.elemContexts[i] = new Renderer(elem);
             }
             updateFunc(context.elemContexts[i], modelItem);
@@ -74,7 +79,7 @@ class Renderer {
         for (let i = firstIndexToRemove; i< context.oldModelItems.length; i++) {
             let elem = context.elemContexts[i].elem;
             if (elem) {
-                context.containerElem.remove(elem);
+                container.remove(elem);
             }
         }        
         context.oldModelItems.splice(firstIndexToRemove, context.oldModelItems.length - firstIndexToRemove);
