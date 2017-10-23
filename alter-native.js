@@ -9,6 +9,13 @@ function instantiateTemplate(templateElem) {
     return templateElem.content ? templateElem.content.querySelector("*").cloneNode(true) : templateElem.firstElementChild.cloneNode(true);
 }
 
+function replaceFromTempalte(elemToReplace, templateElem) {
+     let elem = instantiateTemplate(templateElem);
+     let parent = elemToReplace.parentElement;
+     parent.replaceChild(elem, elemToReplace);
+     return elem;
+}
+
 function createChildFromTemplate(templateElem, parentElem, renderer) {
     let elem = instantiateTemplate(templateElem);
     let rr = renderer && renderer(elem);
@@ -103,6 +110,16 @@ class Renderer {
         
         return this;
     }
+    
+    mount(selector, component, props) {
+        let context = this.context[selector];
+        if (!context) {
+            context = this.context[selector] = {};
+            let elem = this.elem.matches(selector) ? this.elem : this.elem.querySelector(selector);
+            context.componentInstance = new component(elem, props);
+        }
+        context.componentInstance.update(props)
+    }
 }
 
 function createIdlSetter(idlName) {
@@ -174,7 +191,7 @@ function fillSetters(node, stub, setters) {
 
 function renderer(rootElem, renderFunc) {
     let context = new Renderer(rootElem);
-    return  () => {
-        renderFunc(context);
+    return  (props) => {
+        renderFunc(context, props);
     };
 }

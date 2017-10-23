@@ -1,4 +1,28 @@
-
+class DbMonQuery {
+    constructor(elem, props) { 
+        this.elem = replaceFromTempalte(elem, template(`
+            <template>
+                <td class="Query @elapsedClass">
+                  @formatElapsed
+                  <div class="popover left">
+                    <div class="popover-content">@query</div>
+                    <div class="arrow"/>
+                  </div>
+                </td>
+            </template>                
+        `));
+        
+        this.renderer = renderer(this.elem, (query, props) => {
+            query.set("@formatElapsed", props.formatElapsed);
+            query.set("@query", props.query);
+            query.set("@elapsedClass", props.elapsedClassName);
+        });   
+    }
+    
+    update(props) {
+        this.renderer(props);
+    }
+}
 
 class DbMonTable extends HTMLElement {
     constructor() {
@@ -9,6 +33,7 @@ class DbMonTable extends HTMLElement {
         this.template = template(`
             <template id="component-template">
                 <div>
+                    <input disabled="@toggled" />
                     <table class="table table-striped latest-data">
                       <tbody>
                         <template id="row">
@@ -20,13 +45,7 @@ class DbMonTable extends HTMLElement {
                                   </span>
                                 </td>
                                 <template id="query" >
-                                    <td class="Query @elapsedClass">
-                                      @formatElapsed
-                                      <div class="popover left">
-                                        <div class="popover-content">@query</div>
-                                        <div class="arrow"/>
-                                      </div>
-                                    </td>
+                                    <td is="db-mon-query"></td>
                                 </template>
                             </tr>                  
                         </template>
@@ -47,6 +66,7 @@ class DbMonTable extends HTMLElement {
         }, 3000);
         
         this.renderer = renderer(rootElem, (table) => {
+            table.set("@toggled", toggle);
             table.repeat("#row", this.databases, (row, db) => {                
                 row.set("@dbname", db.dbname);
                 row.set("@countClass", db.lastSample.countClassName);
@@ -54,9 +74,7 @@ class DbMonTable extends HTMLElement {
                 row.set("@dbclass", toggle ? "dbtestclass1" : null);
                 row.set("@dbclass2", toggle ? "dbtestclass2" : "");
                 row.repeat("#query", db.lastSample.topFiveQueries, (query, queryModel) => {
-                    query.set("@formatElapsed", queryModel.formatElapsed);
-                    query.set("@query", queryModel.query);
-                    query.set("@elapsedClass", queryModel.elapsedClassName);
+                    query.mount("td[is='db-mon-query']", DbMonQuery, queryModel)
                 });
             });
         });
@@ -80,20 +98,3 @@ class DbMonTable extends HTMLElement {
 }
 customElements.define('db-mon-table', DbMonTable);
 
-
-class TestWrapper extends HTMLElement {
-    constructor(){
-        super();
-        
-        let inner = this.firstElementChild;
-        this.innerHTML = "<div data-test-wrapper></div>";
-        this.firstElementChild.appendChild(inner);
-        console.info(this.querySelector("#wrapped"));
-    }
-    
-     connectedCallback() {
-        console.info(this.querySelector("#wrapped"));
-    }
-}
-
-customElements.define('test-wrapper', TestWrapper);
