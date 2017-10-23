@@ -1,114 +1,51 @@
-class DbMonQuery {
-    constructor(elem, props) { 
-        let myRoot = replaceFromTempalte(elem, template(`
-            <template>
-                <td class="Query @elapsedClass">
-                  @formatElapsed
-                  <div class="popover left">
-                    <div class="popover-content">@query</div>
-                    <div class="arrow"/>
-                  </div>
-                </td>
-            </template>                
-        `));
-        
-        this.update = renderer(myRoot, (query, props) => {
-            query.set("@formatElapsed", props.formatElapsed);
-            query.set("@query", props.query);
-            query.set("@elapsedClass", props.elapsedClassName);
-        });
-    }
-}
-
-class DbMonQueryList {
-    constructor(elem, props) { 
-        let tpl = template(`
-            <template>
-                <td is="db-mon-query"></td>
-            </template>                
-        `);
-        
-        // elem is a stub. Replace it with our elements.
-        let prev = elem.previousSibling;
-        let container = elem.parentElement;
-        container.removeChild(elem);
-        let insertBefore = prev ? prev.nextSibling : null;
-        
-        this.update = renderer(elem, (row, props) => {
-            row.repeatEx("row", tpl, container, insertBefore, props, (query, queryModel) => {
-                query.mount("td[is='db-mon-query']", DbMonQuery, queryModel)
-            });
-        });
-    }
-}
-
-class DbMonTable extends HTMLElement {
-    constructor() {
-        super();
-        
-        this.databases = [];        
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var DbMonTable = /** @class */ (function (_super) {
+    __extends(DbMonTable, _super);
+    function DbMonTable() {
+        var _this = _super.call(this) || this;
+        _this.template = makeTemplate("\n      <template id=\"component-template\">\n          <div>\n              <input disabled=\"@toggled\" />\n              <table class=\"table table-striped latest-data\">\n                <tbody>\n                  <template id=\"row\">\n                      <tr>\n                          <td class=\"dbname @dbclass xx @dbclass2\">It is @dbname! Yes @dbname!</td>\n                          <td class=\"query-count\">\n                            <span class=\"@countClass\">\n                              @queryCount\n                            </span>\n                          </td>\n                          <td id=\"queries\"></td>\n                      </tr>                  \n                  </template>\n                </tbody>\n              </table>\n          </div>\n      </template>");
+        _this.databases = [];
         // this.template = document.getElementById("component-template");
-        this.template = template(`
-            <template id="component-template">
-                <div>
-                    <input disabled="@toggled" />
-                    <table class="table table-striped latest-data">
-                      <tbody>
-                        <template id="row">
-                            <tr>
-                                <td class="dbname @dbclass xx @dbclass2">It is @dbname! Yes @dbname!</td>
-                                <td class="query-count">
-                                  <span class="@countClass">
-                                    @queryCount
-                                  </span>
-                                </td>
-                                <td id="queries"></td>
-                            </tr>                  
-                        </template>
-                      </tbody>
-                    </table>
-                </div>
-            </template>`)
-            
-        createChildFromTemplate(this.template, this, this.createRenderer.bind(this));
-        this.update();
-    }
-
-    createRenderer(rootElem) {
-        let toggle = true;
-        setInterval(() => {
-            toggle = !toggle;
-            this.update();
+        _this.appendChild(instantiateTemplate(_this.template));
+        _this.root = new Renderer(_this);
+        _this.update();
+        _this.toggle = true;
+        setInterval(function () {
+            _this.toggle = !_this.toggle;
+            _this.update();
         }, 3000);
-        
-        this.renderer = renderer(rootElem, (table) => {
-            table.set("@toggled", toggle);
-            table.repeat("#row", this.databases, (row, db) => {                
-                row.set("@dbname", db.dbname);
-                row.set("@countClass", db.lastSample.countClassName);
-                row.set("@queryCount", db.lastSample.nbQueries);
-                row.set("@dbclass", toggle ? "dbtestclass1" : null);
-                row.set("@dbclass2", toggle ? "dbtestclass2" : "");
-                row.mount("#queries", DbMonQueryList, db.lastSample.topFiveQueries);
-            });
+        return _this;
+    }
+    DbMonTable.prototype.update = function () {
+        var _this = this;
+        this.root.set("@toggled", this.toggle);
+        this.root.repeat("#row", this.databases, function (row, db) {
+            row.set("@dbname", db.dbname);
+            row.set("@countClass", db.lastSample.countClassName);
+            row.set("@queryCount", db.lastSample.nbQueries);
+            row.set("@dbclass", _this.toggle ? "dbtestclass1" : null);
+            row.set("@dbclass2", _this.toggle ? "dbtestclass2" : "");
+            row.mount(db.lastSample.topFiveQueries).into("#queries", DbMonQueryList);
         });
-        return this.renderer;
-    }
-    
-    update() {
-        this.renderer();
-    }
-    
-    connectedCallback() {
+    };
+    DbMonTable.prototype.connectedCallback = function () {
         this.run();
-    }
-    
-    run() {
-        this.databases = ENV.generateData().toArray();
+    };
+    DbMonTable.prototype.run = function () {
+        this.databases = window["ENV"].generateData().toArray();
         this.update();
-        Monitoring.renderRate.ping();
-        setTimeout(this.run.bind(this), ENV.timeout);
-    }
-}
-customElements.define('db-mon-table', DbMonTable);
-
+        window["Monitoring"].renderRate.ping();
+        setTimeout(this.run.bind(this), window["ENV"].timeout);
+    };
+    return DbMonTable;
+}(HTMLElement));
+window["customElements"].define('db-mon-table', DbMonTable);

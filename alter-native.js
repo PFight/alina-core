@@ -1,73 +1,75 @@
-function template(str) {
-    let elem = document.createElement("div");
+function inst() {
+    return null;
+}
+function makeTemplate(str) {
+    var elem = document.createElement("div");
     elem.innerHTML = str;
     // document.body.appendChild(elem);
     return elem.firstElementChild;
 }
-
 function instantiateTemplate(templateElem) {
     return templateElem.content ? templateElem.content.querySelector("*").cloneNode(true) : templateElem.firstElementChild.cloneNode(true);
 }
-
 function replaceFromTempalte(elemToReplace, templateElem) {
-     let elem = instantiateTemplate(templateElem);
-     let parent = elemToReplace.parentElement;
-     parent.replaceChild(elem, elemToReplace);
-     return elem;
+    var elem = instantiateTemplate(templateElem);
+    var parent = elemToReplace.parentElement;
+    parent.replaceChild(elem, elemToReplace);
+    return elem;
 }
-
 function createChildFromTemplate(templateElem, parentElem, renderer) {
-    let elem = instantiateTemplate(templateElem);
-    let rr = renderer && renderer(elem);
-    if (typeof(rr) == "function") {
+    var elem = instantiateTemplate(templateElem);
+    var rr = renderer && renderer(elem);
+    if (typeof (rr) == "function") {
         rr();
-    } else if (rr && rr.length) {
-        rr.forEach(x =>x());
+    }
+    else if (rr && rr.length) {
+        rr.forEach(function (x) { return x(); });
     }
     if (parentElem) {
         parentElem.appendChild(elem);
     }
     return elem;
 }
-
 function compare(a, b, comparer) {
-    if (!a && b) return false;
-    if (a && !b) return false;
-    if (!a && !b) return true;
-    if (a && b && !comparer) return true;
-    if (a && b && comparer && comparer(a,b)) return true;
+    if (!a && b)
+        return false;
+    if (a && !b)
+        return false;
+    if (!a && !b)
+        return true;
+    if (a && b && !comparer)
+        return true;
+    if (a && b && comparer && comparer(a, b))
+        return true;
     return false;
 }
-
-class Renderer {
-    constructor(elem) {
+var Renderer = /** @class */ (function () {
+    function Renderer(elem) {
         this.elem = elem;
         this.context = {};
-    }    
-
-    repeat(templateSelector, modelItems, updateFunc, equals) {
-        let template = this.elem.querySelector(templateSelector);
-        let container = template.parentElement;
-        return this.repeatEx(templateSelector, template, container, null, modelItems, updateFunc, equals);
     }
-    
-    repeatEx(key, template, container, insertBefore, modelItems, updateFunc, equals) {      
-        let context = this.context[key];
+    Renderer.prototype.repeat = function (templateSelector, modelItems, updateFunc, equals) {
+        var template = this.elem.querySelector(templateSelector);
+        var container = template.parentElement;
+        return this.repeatEx(templateSelector, template, container, null, modelItems, updateFunc, equals);
+    };
+    Renderer.prototype.repeatEx = function (key, template, container, insertBefore, modelItems, updateFunc, equals) {
+        var context = this.context[key];
         if (!context) {
-            context = this.context[key] = {}    
+            context = this.context[key] = {};
             context.oldModelItems = [];
             context.elemContexts = [];
         }
-
         // Add new and update existing
-        for (let i = 0; i< modelItems.length; i++) {
-            let modelItem = modelItems[i];
+        for (var i = 0; i < modelItems.length; i++) {
+            var modelItem = modelItems[i];
             if (!compare(modelItem, context.oldModelItems[i], equals)) {
                 context.oldModelItems[i] = modelItem;
-                let elem = instantiateTemplate(template);
+                var elem = instantiateTemplate(template);
                 if (insertBefore) {
                     container.insertBefore(elem, insertBefore);
-                } else {
+                }
+                else {
                     container.appendChild(elem);
                 }
                 context.elemContexts[i] = new Renderer(elem);
@@ -75,129 +77,141 @@ class Renderer {
             updateFunc(context.elemContexts[i], modelItem);
         }
         // Remove old
-        let firstIndexToRemove = modelItems.length;
-        for (let i = firstIndexToRemove; i< context.oldModelItems.length; i++) {
-            let elem = context.elemContexts[i].elem;
+        var firstIndexToRemove = modelItems.length;
+        for (var i = firstIndexToRemove; i < context.oldModelItems.length; i++) {
+            var elem = context.elemContexts[i].elem;
             if (elem) {
-                container.remove(elem);
+                container.removeChild(elem);
             }
-        }        
+        }
         context.oldModelItems.splice(firstIndexToRemove, context.oldModelItems.length - firstIndexToRemove);
         context.elemContexts.splice(firstIndexToRemove, context.elemContexts.length - firstIndexToRemove);
-        
         context.oldModelItems = modelItems;
-        
         return this;
-    }
-
-    set(stub, value) {  
-        let context = this.context[stub];
+    };
+    Renderer.prototype.set = function (stub, value) {
+        var context = this.context[stub];
         if (!context) {
             context = this.context[stub] = {};
         }
-    
         if (context.setters === undefined) {
             context.setters = [];
             fillSetters(this.elem, stub, context.setters);
             context.lastValue = stub;
-        } else {        
-            if (context.lastValue != value) {        
-                let newLastValue = value;
-                context.setters.forEach(setter => {
-                    let result = setter(context.lastValue, value);
+        }
+        else {
+            if (context.lastValue != value) {
+                var newLastValue_1 = value;
+                context.setters.forEach(function (setter) {
+                    var result = setter(context.lastValue, value);
                     if (result !== undefined) {
-                        newLastValue = result;
-                    }                    
+                        newLastValue_1 = result;
+                    }
                 });
-                context.lastValue = newLastValue;
+                context.lastValue = newLastValue_1;
             }
         }
-        
         return this;
-    }
-    
-    mount(selector, component, props) {
-        let context = this.context[selector];
+    };
+    Renderer.prototype.mount = function (props) {
+        var c = new PropsContainer();
+        c.props = props;
+        c.renderer = this;
+        return c;
+    };
+    Renderer.prototype.mountEx = function (selector, component, props) {
+        var context = this.context[selector];
         if (!context) {
             context = this.context[selector] = {};
-            let elem = this.elem.matches(selector) ? this.elem : this.elem.querySelector(selector);
+            var elem = this.elem.matches(selector) ? this.elem : this.elem.querySelector(selector);
             context.componentInstance = new component(elem, props);
-        } else {
-            context.componentInstance.update(props)
         }
+        else {
+            context.componentInstance.update(props);
+        }
+    };
+    return Renderer;
+}());
+var PropsContainer = /** @class */ (function () {
+    function PropsContainer() {
     }
-}
-
+    PropsContainer.prototype.into = function (selector, component) {
+        return this.renderer.mountEx(selector, component, this.props);
+    };
+    return PropsContainer;
+}());
 function createIdlSetter(idlName) {
     return function (oldVal, newVal) {
-        let currentVal = this[idlName];
-        if (typeof(currentVal) == "string") {
-            this[idlName] = currentVal.replace(oldVal, newVal); 
-        } else {
+        var currentVal = this[idlName];
+        if (typeof (currentVal) == "string") {
+            this[idlName] = currentVal.replace(oldVal, newVal);
+        }
+        else {
             this[idlName] = newVal;
         }
-    }        
+    };
 }
-
 var CUSTOM_ATTRIBUTE_SETTERS = {
-    "class": function (oldVal,newVal) {
-        let preparedValue = (!newVal) ?  "" :  newVal + " ";
+    "class": function (oldVal, newVal) {
+        var preparedValue = (!newVal) ? "" : newVal + " ";
         this.className = this.className.replace(oldVal, preparedValue);
         return preparedValue;
     },
     "for": createIdlSetter("htmlFor")
-    
 };
-
 function fillSetters(node, stub, setters) {
     if (node.nodeType == 3) {
-        let parts = node.textContent.split(stub);
+        var parts = node.textContent.split(stub);
         if (parts.length > 1) {
             // Split content, to make stub separate node 
             // and save this node to context.stubNodes
-            let nodeParent = node.parentNode;
+            var nodeParent = node.parentNode;
             nodeParent.removeChild(node);
-            for (let i = 0; i < parts.length-1; i++) {
-                let part = parts[i];
+            var _loop_1 = function (i) {
+                var part = parts[i];
                 if (part.length > 0) {
                     nodeParent.appendChild(document.createTextNode(part));
                 }
-                let stubNode = document.createTextNode("");
-                setters.push((oldVal, newVal) =>  stubNode.textContent = newVal);
+                var stubNode = document.createTextNode("");
+                setters.push(function (oldVal, newVal) { return stubNode.textContent = newVal; });
                 nodeParent.appendChild(stubNode);
+            };
+            for (var i = 0; i < parts.length - 1; i++) {
+                _loop_1(i);
             }
-            let lastPart = parts[parts.length-1];
+            var lastPart = parts[parts.length - 1];
             if (lastPart) {
                 nodeParent.appendChild(document.createTextNode(lastPart));
             }
         }
     }
     if (node.attributes) {
-        for (let i = 0; i < node.attributes.length; i++) {
-            let attr = node.attributes[i];
+        var _loop_2 = function (i) {
+            var attr = node.attributes[i];
             if (attr.value && attr.value.indexOf(stub) >= 0) {
-                let setter = CUSTOM_ATTRIBUTE_SETTERS[attr.name];
+                var setter = CUSTOM_ATTRIBUTE_SETTERS[attr.name];
                 if (!setter) {
                     if (attr.name in node) {
                         setter = createIdlSetter(attr.name);
-                    } else {
-                        setter = (oldVal, newVal) => attr.value = attr.value.replace(oldVal, newVal);
+                    }
+                    else {
+                        setter = function (oldVal, newVal) { return attr.value = attr.value.replace(oldVal, newVal); };
                     }
                 }
                 setters.push(setter.bind(node));
             }
+        };
+        for (var i = 0; i < node.attributes.length; i++) {
+            _loop_2(i);
         }
     }
-    
-    for (let i = 0; i < node.childNodes.length; i++) {
+    for (var i = 0; i < node.childNodes.length; i++) {
         fillSetters(node.childNodes[i], stub, setters);
     }
 }
-
-
 function renderer(rootElem, renderFunc) {
-    let context = new Renderer(rootElem);
-    return  (props) => {
+    var context = new Renderer(rootElem);
+    return function (props) {
         renderFunc(context, props);
     };
 }
