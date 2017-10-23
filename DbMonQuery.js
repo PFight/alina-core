@@ -1,6 +1,6 @@
 var DbMonQuery = /** @class */ (function () {
     function DbMonQuery(elem, props) {
-        this.template = makeTemplate("\n      <template>\n          <td class=\"Query @elapsedClass\">\n            @formatElapsed\n            <div class=\"popover left\">\n              <div class=\"popover-content\">@query</div>\n              <div class=\"arrow\"/>\n            </div>\n          </td>\n      </template>                \n  ");
+        this.template = makeTemplate("\n      <td class=\"Query @elapsedClass\">\n        @formatElapsed\n        <div class=\"popover left\">\n          <div class=\"popover-content\">@query</div>\n          <div class=\"arrow\"/>\n        </div>\n      </td>\n  ");
         var rootElem = replaceFromTempalte(elem, this.template);
         this.root = new Renderer(rootElem);
     }

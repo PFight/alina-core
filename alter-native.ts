@@ -8,10 +8,10 @@ interface AlterNativeComponentConstructor<PropsT> {
 
 
 function makeTemplate(str: string): HTMLTemplateElement {
-  let elem = document.createElement("div");
+  let elem = document.createElement("template");
   elem.innerHTML = str;
   // document.body.appendChild(elem);
-  return elem.firstElementChild as HTMLTemplateElement;
+  return elem;
 }
 
 function instantiateTemplate(templateElem) {

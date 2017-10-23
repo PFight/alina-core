@@ -13,9 +13,7 @@
   }
 
   template = makeTemplate(`
-      <template>
-          <td is="db-mon-query"></td>
-      </template>                
+      <td is="db-mon-query"></td>               
   `);
 
   update(props: Query[]) {

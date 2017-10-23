@@ -30,27 +30,25 @@ class DbMonTable extends HTMLElement {
   }
 
   template = makeTemplate(`
-      <template id="component-template">
-          <div>
-              <input disabled="@toggled" />
-              <table class="table table-striped latest-data">
-                <tbody>
-                  <template id="row">
-                      <tr>
-                          <td class="dbname @dbclass xx @dbclass2">It is @dbname! Yes @dbname!</td>
-                          <td class="query-count">
-                            <span class="@countClass">
-                              @queryCount
-                            </span>
-                          </td>
-                          <td id="queries"></td>
-                      </tr>                  
-                  </template>
-                </tbody>
-              </table>
-          </div>
-      </template>`
-  )
+    <div>
+        <input disabled="@toggled" />
+        <table class="table table-striped latest-data">
+          <tbody>
+            <template id="row">
+                <tr>
+                    <td class="dbname @dbclass xx @dbclass2">It is @dbname! Yes @dbname!</td>
+                    <td class="query-count">
+                      <span class="@countClass">
+                        @queryCount
+                      </span>
+                    </td>
+                    <td id="queries"></td>
+                </tr>                  
+            </template>
+          </tbody>
+        </table>
+    </div>
+  `)
 
   update() {
     this.root.set("@toggled", this.toggle);

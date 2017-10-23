@@ -1,6 +1,6 @@
 var DbMonQueryList = /** @class */ (function () {
     function DbMonQueryList(elem, props) {
-        this.template = makeTemplate("\n      <template>\n          <td is=\"db-mon-query\"></td>\n      </template>                \n  ");
+        this.template = makeTemplate("\n      <td is=\"db-mon-query\"></td>               \n  ");
         // elem is a stub. Replace it with our elements.
         var prev = elem.previousSibling;
         this.container = elem.parentElement;

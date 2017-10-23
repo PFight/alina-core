@@ -13,15 +13,13 @@ class DbMonQuery implements AlterNativeComponent<Query> {
   }
 
   template = makeTemplate(`
-      <template>
-          <td class="Query @elapsedClass">
-            @formatElapsed
-            <div class="popover left">
-              <div class="popover-content">@query</div>
-              <div class="arrow"/>
-            </div>
-          </td>
-      </template>                
+      <td class="Query @elapsedClass">
+        @formatElapsed
+        <div class="popover left">
+          <div class="popover-content">@query</div>
+          <div class="arrow"/>
+        </div>
+      </td>
   `);
 
   update(props: Query) {

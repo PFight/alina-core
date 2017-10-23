@@ -1,8 +1,8 @@
 function makeTemplate(str) {
-    var elem = document.createElement("div");
+    var elem = document.createElement("template");
     elem.innerHTML = str;
     // document.body.appendChild(elem);
-    return elem.firstElementChild;
+    return elem;
 }
 function instantiateTemplate(templateElem) {
     return templateElem.content ? templateElem.content.querySelector("*").cloneNode(true) : templateElem.firstElementChild.cloneNode(true);
