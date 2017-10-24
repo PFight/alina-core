@@ -16,32 +16,16 @@ function replaceFromTempalte(elemToReplace, templateElem) {
     parent.replaceChild(elem, elemToReplace);
     return elem;
 }
-function createChildFromTemplate(templateElem, parentElem, renderer) {
-    var elem = instantiateTemplate(templateElem);
-    var rr = renderer && renderer(elem);
-    if (typeof (rr) == "function") {
-        rr();
-    }
-    else if (rr && rr.length) {
-        rr.forEach(function (x) { return x(); });
-    }
-    if (parentElem) {
-        parentElem.appendChild(elem);
-    }
-    return elem;
+function definedNotNull(x) {
+    return x !== undefined && x !== null;
+}
+function undefinedOrNull(x) {
+    return x === undefined || x === null;
 }
 function compare(a, b, comparer) {
-    if (!a && b)
-        return false;
-    if (a && !b)
-        return false;
-    if (!a && !b)
-        return true;
-    if (a && b && !comparer)
-        return true;
-    if (a && b && comparer && comparer(a, b))
-        return true;
-    return false;
+    return (undefinedOrNull(a) && undefinedOrNull(b)) ||
+        (definedNotNull(a) && definedNotNull(b) && !comparer) ||
+        (definedNotNull(a) && definedNotNull(b) && comparer && comparer(a, b));
 }
 var Renderer = /** @class */ (function () {
     function Renderer(elem) {
@@ -57,36 +41,45 @@ var Renderer = /** @class */ (function () {
         var context = this.context[key];
         if (!context) {
             context = this.context[key] = {};
-            context.oldModelItems = [];
-            context.elemContexts = [];
+            context.itemContexts = [];
         }
         // Add new and update existing
         for (var i = 0; i < modelItems.length; i++) {
             var modelItem = modelItems[i];
-            if (!compare(modelItem, context.oldModelItems[i], equals)) {
-                context.oldModelItems[i] = modelItem;
-                var elem = instantiateTemplate(template);
-                if (insertBefore) {
-                    container.insertBefore(elem, insertBefore);
+            // Createcontext
+            var itemContext = context.itemContexts[i];
+            if (!itemContext || !compare(modelItem, itemContext.oldModelItem, equals)) {
+                itemContext = context.itemContexts[i] = {};
+            }
+            // Create node
+            if (!itemContext.node) {
+                itemContext.node = instantiateTemplate(template);
+                itemContext.renderer = new Renderer(itemContext.node);
+            }
+            // Insert to parent
+            if (!itemContext.mounted) {
+                var position = i == 0 ? insertBefore : context.itemContexts[i - 1].node.nextSibling;
+                if (position) {
+                    container.insertBefore(itemContext.node, position);
                 }
                 else {
-                    container.appendChild(elem);
+                    container.appendChild(itemContext.node);
                 }
-                context.elemContexts[i] = new Renderer(elem);
+                itemContext.mounted = true;
             }
-            updateFunc(context.elemContexts[i], modelItem);
+            // Fill content
+            updateFunc(itemContext.renderer, modelItem);
+            itemContext.oldModelItem = modelItem;
         }
         // Remove old
         var firstIndexToRemove = modelItems.length;
-        for (var i = firstIndexToRemove; i < context.oldModelItems.length; i++) {
-            var elem = context.elemContexts[i].elem;
+        for (var i = firstIndexToRemove; i < context.itemContexts.length; i++) {
+            var elem = context.itemContexts[i].node;
             if (elem) {
                 container.removeChild(elem);
             }
         }
-        context.oldModelItems.splice(firstIndexToRemove, context.oldModelItems.length - firstIndexToRemove);
-        context.elemContexts.splice(firstIndexToRemove, context.elemContexts.length - firstIndexToRemove);
-        context.oldModelItems = modelItems;
+        context.itemContexts.splice(firstIndexToRemove, context.itemContexts.length - firstIndexToRemove);
         return this;
     };
     Renderer.prototype.set = function (stub, value) {
@@ -99,17 +92,15 @@ var Renderer = /** @class */ (function () {
             fillSetters(this.elem, stub, context.setters);
             context.lastValue = stub;
         }
-        else {
-            if (context.lastValue != value) {
-                var newLastValue_1 = value;
-                context.setters.forEach(function (setter) {
-                    var result = setter(context.lastValue, value);
-                    if (result !== undefined) {
-                        newLastValue_1 = result;
-                    }
-                });
-                context.lastValue = newLastValue_1;
-            }
+        if (context.lastValue != value) {
+            var newLastValue_1 = value;
+            context.setters.forEach(function (setter) {
+                var result = setter(context.lastValue, value);
+                if (result !== undefined) {
+                    newLastValue_1 = result;
+                }
+            });
+            context.lastValue = newLastValue_1;
         }
         return this;
     };
@@ -131,11 +122,10 @@ var Renderer = /** @class */ (function () {
             if (!elem) {
                 elem = findTextNode(selector, this.elem);
             }
-            context.componentInstance = new component(elem, props);
+            context.componentInstance = new component();
+            context.componentInstance.initialize(elem, props);
         }
-        else {
-            context.componentInstance.update(props);
-        }
+        context.componentInstance.update(props);
     };
     return Renderer;
 }());

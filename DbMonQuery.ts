@@ -7,9 +7,10 @@
 class DbMonQuery implements AltComponent<Query> {
   root: Renderer;
 
-  constructor(elem, props) {
+  initialize(elem, props) {
     let rootElem = replaceFromTempalte(elem, this.template);
     this.root = new Renderer(rootElem);
+    return rootElem;
   }
 
   template = makeTemplate(`

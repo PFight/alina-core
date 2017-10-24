@@ -1,7 +1,7 @@
 ﻿class DbMonQueryList implements AltComponent<Query[]> {
   root: Renderer;
 
-  constructor(elem, props) {
+  initialize(elem, props) {
     this.root = new Renderer(elem);
   }
 

@@ -1,11 +1,11 @@
 interface AltComponent<PropsT> {
+  initialize(node: Node, props: PropsT): Node | void;
   update(props: PropsT): void;
 }
 
 interface AltComponentConstructor<PropsT> {
-  new(elem: HTMLElement, props: PropsT): AltComponent<PropsT>;
+  new(): AltComponent<PropsT>;
 }
-
 
 function makeTemplate(str: string): HTMLTemplateElement {
   let elem = document.createElement("template");
@@ -28,27 +28,18 @@ function replaceFromTempalte(elemToReplace, templateElem) {
   return elem;
 }
 
-function createChildFromTemplate(templateElem, parentElem, renderer) {
-  let elem = instantiateTemplate(templateElem);
-  let rr = renderer && renderer(elem);
-  if (typeof (rr) == "function") {
-    rr();
-  } else if (rr && rr.length) {
-    rr.forEach(x => x());
-  }
-  if (parentElem) {
-    parentElem.appendChild(elem);
-  }
-  return elem;
+function definedNotNull(x) {
+  return x !== undefined && x !== null;
+}
+
+function undefinedOrNull(x) {
+  return x === undefined || x === null;
 }
 
 function compare(a, b, comparer) {
-  if (!a && b) return false;
-  if (a && !b) return false;
-  if (!a && !b) return true;
-  if (a && b && !comparer) return true;
-  if (a && b && comparer && comparer(a, b)) return true;
-  return false;
+  return (undefinedOrNull(a) && undefinedOrNull(b)) ||
+    (definedNotNull(a) && definedNotNull(b) && !comparer) ||
+    (definedNotNull(a) && definedNotNull(b) && comparer && comparer(a, b));
 }
 
 class Renderer {
@@ -60,9 +51,11 @@ class Renderer {
     this.context = {};
   }
 
-  repeat<T>(templateSelector: string, modelItems: T[],
+  repeat<T>(templateSelector: string,
+    modelItems: T[],
     updateFunc: (renderer: Renderer, model: T) => void,
-    equals?: (a: T, b: T) => boolean) {
+    equals?: (a: T, b: T) => boolean)
+  {
     let template = this.elem.querySelector(templateSelector) as HTMLTemplateElement;
     let container = template.parentElement;
     return this.repeatEx(templateSelector, template, container,
@@ -77,38 +70,52 @@ class Renderer {
     let context = this.context[key];
     if (!context) {
       context = this.context[key] = {}
-      context.oldModelItems = [];
-      context.elemContexts = [];
+      context.itemContexts = [];
     }
 
     // Add new and update existing
     for (let i = 0; i < modelItems.length; i++) {
       let modelItem = modelItems[i];
-      if (!compare(modelItem, context.oldModelItems[i], equals)) {
-        context.oldModelItems[i] = modelItem;
-        let elem = instantiateTemplate(template);
-        if (insertBefore) {
-          container.insertBefore(elem, insertBefore);
-        } else {
-          container.appendChild(elem);
-        }
-        context.elemContexts[i] = new Renderer(elem);
+
+      // Createcontext
+      let itemContext = context.itemContexts[i];
+      if (!itemContext || !compare(modelItem, itemContext.oldModelItem, equals)) {
+        itemContext = context.itemContexts[i] = {};
       }
-      updateFunc(context.elemContexts[i], modelItem);
+
+      // Create node
+      if (!itemContext.node) {
+        itemContext.node = instantiateTemplate(template);
+        itemContext.renderer = new Renderer(itemContext.node);
+      }
+
+      // Insert to parent
+      if (!itemContext.mounted) {
+        let position = i == 0 ? insertBefore : context.itemContexts[i - 1].node.nextSibling;
+        if (position) {
+          container.insertBefore(itemContext.node, position);
+        } else {
+          container.appendChild(itemContext.node);
+        }
+        itemContext.mounted = true;
+      }
+
+      // Fill content
+      updateFunc(itemContext.renderer, modelItem);
+
+      itemContext.oldModelItem = modelItem;
     }
+
     // Remove old
     let firstIndexToRemove = modelItems.length;
-    for (let i = firstIndexToRemove; i < context.oldModelItems.length; i++) {
-      let elem = context.elemContexts[i].elem;
+    for (let i = firstIndexToRemove; i < context.itemContexts.length; i++) {
+      let elem = context.itemContexts[i].node;
       if (elem) {
         container.removeChild(elem);
       }
     }
-    context.oldModelItems.splice(firstIndexToRemove, context.oldModelItems.length - firstIndexToRemove);
-    context.elemContexts.splice(firstIndexToRemove, context.elemContexts.length - firstIndexToRemove);
-
-    context.oldModelItems = modelItems;
-
+    context.itemContexts.splice(firstIndexToRemove,
+      context.itemContexts.length - firstIndexToRemove);
     return this;
   }
 
@@ -122,18 +129,18 @@ class Renderer {
       context.setters = [];
       fillSetters(this.elem, stub, context.setters);
       context.lastValue = stub;
-    } else {
-      if (context.lastValue != value) {
-        let newLastValue = value;
-        context.setters.forEach(setter => {
-          let result = setter(context.lastValue, value);
-          if (result !== undefined) {
-            newLastValue = result;
-          }
-        });
-        context.lastValue = newLastValue;
-      }
     }
+
+    if (context.lastValue != value) {
+      let newLastValue = value;
+      context.setters.forEach(setter => {
+        let result = setter(context.lastValue, value);
+        if (result !== undefined) {
+          newLastValue = result;
+        }
+      });
+      context.lastValue = newLastValue;
+    }    
 
     return this;
   }
@@ -159,10 +166,11 @@ class Renderer {
       if (!elem) {
         elem = findTextNode(selector, this.elem) as Element;
       }
-      context.componentInstance = new component(elem as HTMLElement, props);
-    } else {
-      context.componentInstance.update(props)
+      context.componentInstance = new component();
+      context.componentInstance.initialize(elem, props);
     }
+
+    context.componentInstance.update(props)
   }
 }
 
