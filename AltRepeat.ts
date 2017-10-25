@@ -4,7 +4,6 @@
 
 interface RepeatItemContext<T> {
   oldModelItem?: T;
-  node?: Node;
   mounted?: boolean;
   renderer?: Renderer;
 }
@@ -56,24 +55,24 @@ class AltRepeat implements AltComponent {
       }
 
       // Create node
-      if (!itemContext.node) {
-        itemContext.node = fromTemplate(props.template);
-        itemContext.renderer = new Renderer([{ node: itemContext.node, queryType: QueryType.Node }]);
-      }
-
-      // Insert to parent
-      if (!itemContext.mounted) {
-        let position = i == 0 ? props.insertBefore : this.itemContexts[i - 1].node.nextSibling;
-        if (position) {
-          props.container.insertBefore(itemContext.node, position);
-        } else {
-          props.container.appendChild(itemContext.node);
-        }
-        itemContext.mounted = true;
+      if (!itemContext.renderer) {
+        let node = fromTemplate(props.template);
+        itemContext.renderer = new Renderer([{ node: node, queryType: QueryType.Node }]);
       }
 
       // Fill content
       props.update(itemContext.renderer, modelItem);
+
+      // Insert to parent
+      if (!itemContext.mounted) {
+        let position = i == 0 ? props.insertBefore : this.itemContexts[i - 1].renderer.node.nextSibling;
+        if (position) {
+          props.container.insertBefore(itemContext.renderer.node, position);
+        } else {
+          props.container.appendChild(itemContext.renderer.node);
+        }
+        itemContext.mounted = true;
+      }
 
       itemContext.oldModelItem = modelItem;
     }
@@ -81,7 +80,7 @@ class AltRepeat implements AltComponent {
     // Remove old
     let firstIndexToRemove = items.length;
     for (let i = firstIndexToRemove; i < this.itemContexts.length; i++) {
-      let elem = this.itemContexts[i].node;
+      let elem = this.itemContexts[i].renderer.node;
       if (elem) {
         props.container.removeChild(elem);
       }

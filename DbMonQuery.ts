@@ -8,7 +8,7 @@ class DbMonQuery implements AltComponent {
   root: Renderer;
 
   initialize(root: Renderer) {
-    root.elem = replaceFromTempalte(root.elem, this.template) as HTMLElement;
+    root.elem = replaceFromTempalte(root.elem, this.template);
     this.root = root;
   }
 

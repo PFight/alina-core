@@ -19,7 +19,9 @@ function fromTemplate(templateElem) {
 function replaceFromTempalte(elemToReplace, templateElem) {
     var elem = fromTemplate(templateElem);
     var parent = elemToReplace.parentElement;
-    parent.replaceChild(elem, elemToReplace);
+    if (parent) {
+        parent.replaceChild(elem, elemToReplace);
+    }
     return elem;
 }
 function definedNotNull(x) {
@@ -116,6 +118,10 @@ var Renderer = /** @class */ (function () {
                 }]);
             context.componentInstance = new component();
             context.componentInstance.initialize(renderer);
+            // Component can replace current node
+            if (result == this.node && renderer.node != result) {
+                this.node = renderer.node;
+            }
         }
         return context.componentInstance;
     };

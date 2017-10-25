@@ -35,11 +35,13 @@ function fromTemplate(templateElem: HTMLTemplateElement) {
     (templateElem.firstElementChild || templateElem.firstChild).cloneNode(true);
 }
 
-function replaceFromTempalte(elemToReplace, templateElem) {
+function replaceFromTempalte<T extends Node>(elemToReplace: T, templateElem: HTMLTemplateElement): T {
   let elem = fromTemplate(templateElem);
   let parent = elemToReplace.parentElement;
-  parent.replaceChild(elem, elemToReplace);
-  return elem;
+  if (parent) {
+    parent.replaceChild(elem, elemToReplace);
+  }
+  return elem as T;
 }
 
 function definedNotNull(x) {
@@ -136,7 +138,12 @@ class Renderer {
         query: selectorOrText
       }]);
       context.componentInstance = new component();
-      (context.componentInstance as AltComponent).initialize(renderer);      
+      (context.componentInstance as AltComponent).initialize(renderer);
+
+      // Component can replace current node
+      if (result == this.node && renderer.node != result) {
+        this.node = renderer.node;
+      }
     }
     return context.componentInstance;
   }
