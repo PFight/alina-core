@@ -17,6 +17,7 @@ interface NodeBinding {
   queryType: QueryType;
   query?: string;
   attributeName?: string;
+  idlName?: string;
   setter?: ValueSetter<any>;
 }
 
@@ -27,7 +28,7 @@ function makeTemplate(str: string): HTMLTemplateElement {
   return elem;
 }
 
-function instantiateTemplate(templateElem: HTMLTemplateElement) {
+function fromTemplate(templateElem: HTMLTemplateElement) {
   return templateElem.content ?
     (templateElem.content.firstElementChild || templateElem.content.firstChild).cloneNode(true)
     :
@@ -35,7 +36,7 @@ function instantiateTemplate(templateElem: HTMLTemplateElement) {
 }
 
 function replaceFromTempalte(elemToReplace, templateElem) {
-  let elem = instantiateTemplate(templateElem);
+  let elem = fromTemplate(templateElem);
   let parent = elemToReplace.parentElement;
   parent.replaceChild(elem, elemToReplace);
   return elem;
@@ -193,7 +194,7 @@ class Renderer {
     return context.result;
   }
 
-  componentOnStub<ComponentT extends AltComponent>(stub: string,
+  componentOn<ComponentT extends AltComponent>(stub: string,
     component: ComponentConstructor<ComponentT>): ComponentT {
     let key = getComponentKey(stub, component);
     let context = this.context[key];
@@ -208,8 +209,8 @@ class Renderer {
     return context.componentInstance;
   }
 
-  set<T>(stub: string, value: T) {
-    this.componentOnStub(stub, AltSet).set(value);
+  update<T>(stub: string, value: T) {
+    this.componentOn(stub, AltSet).update(value);
   }
 
   repeat<T>(templateSelector: string, items: T[], update: (renderer: Renderer, model: T) => void) {
@@ -257,32 +258,12 @@ function findTextNode(searchText: string, current: Node): Node | undefined {
 
 type ValueSetter<T> = (oldVal: T, newVal: T) => T;
 
-type ElementSetter = (this: Element, oldVal, newVal) => void;
 
-function createIdlSetter(idlName: string): ElementSetter {
-  return function (oldVal, newVal) {
-    let currentVal = this[idlName];
-    if (typeof (currentVal) == "string") {
-      this[idlName] = currentVal.replace(oldVal, newVal);
-    } else {
-      this[idlName] = newVal;
-    }
-  }
-}
 
-var CUSTOM_ATTRIBUTE_SETTERS: { [attributeName: string]: ElementSetter } = {
-  "class": function (oldVal, newVal) {
-    let preparedValue = (!newVal) ? "" : newVal + " ";
-    this.className = this.className.replace(oldVal, preparedValue);
-    return preparedValue;
-  },
-  "for": createIdlSetter("htmlFor")
-};
-
-function fillBindings(node: Node, qeury: string, bindings: NodeBinding[], queryType?: QueryType) {
+function fillBindings(node: Node, query: string, bindings: NodeBinding[], queryType?: QueryType) {
   if (!queryType || queryType == QueryType.NodeTextContent) {
     if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
-      let parts = node.textContent.split(qeury);
+      let parts = node.textContent.split(query);
       if (parts.length > 1) {
         // Split content, to make stub separate node 
         // and save this node to context.stubNodes
@@ -293,12 +274,11 @@ function fillBindings(node: Node, qeury: string, bindings: NodeBinding[], queryT
           if (part.length > 0) {
             nodeParent.appendChild(document.createTextNode(part));
           }
-          let stubNode = document.createTextNode("");
+          let stubNode = document.createTextNode(query);
           bindings.push({
             node: stubNode,
             queryType: QueryType.NodeTextContent,
-            query: qeury,
-            setter: (oldVal, newVal) => stubNode.textContent = newVal
+            query: query
           });
           nodeParent.appendChild(stubNode);
         }
@@ -312,28 +292,24 @@ function fillBindings(node: Node, qeury: string, bindings: NodeBinding[], queryT
   if ((!queryType || queryType == QueryType.NodeAttribute) && node.attributes) {
     for (let i = 0; i < node.attributes.length; i++) {
       let attr = node.attributes[i];
-      if (attr.value && attr.value.indexOf(qeury) >= 0) {
-        let setter = CUSTOM_ATTRIBUTE_SETTERS[attr.name];
-        if (!setter) {
-          if (attr.name in node) {
-            setter = createIdlSetter(attr.name);
-          } else {
-            setter = (oldVal, newVal) => attr.value = attr.value.replace(oldVal, newVal);
-          }
+      if (attr.value && attr.value.indexOf(query) >= 0) {
+        let idlName = ATTRIBUTE_TO_IDL_MAP[attr.name] || attr.name;
+        if (!(idlName in node)) {
+          idlName = null;
         }
         bindings.push({
           node: node,
-          query: qeury,
+          query: query,
           attributeName: attr.name,
-          queryType: QueryType.NodeAttribute,
-          setter: setter.bind(node)
+          idlName: idlName,
+          queryType: QueryType.NodeAttribute
         });
       }
     }
   }
 
   for (let i = 0; i < node.childNodes.length; i++) {
-    fillBindings(node.childNodes[i], qeury, bindings);
+    fillBindings(node.childNodes[i], query, bindings);
   }
 }
 
@@ -356,4 +332,9 @@ function hashCode(str: string) {
     hash |= 0; // Convert to 32bit integer
   }
   return hash;
+};
+
+var ATTRIBUTE_TO_IDL_MAP: { [attributeName: string]: string } = {
+  "class": "className",
+  "for": "htmlFor"
 };

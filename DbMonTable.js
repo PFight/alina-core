@@ -15,7 +15,7 @@ var DbMonTable = /** @class */ (function (_super) {
         _this.template = makeTemplate("\n    <div>\n        <input disabled=\"@toggled\" />\n        <table class=\"table table-striped latest-data\">\n          <tbody>\n            <template id=\"row\">\n                <tr>\n                    <td class=\"dbname @dbclass xx @dbclass2\">It is @dbname! Yes @dbname!</td>\n                    <td class=\"query-count\">\n                      <span class=\"@countClass\">\n                        @queryCount\n                      </span>\n                    </td>\n                    <!-- @queries -->\n                </tr>                  \n            </template>\n          </tbody>\n        </table>\n    </div>\n  ");
         _this.databases = [];
         // this.template = document.getElementById("component-template");
-        _this.appendChild(instantiateTemplate(_this.template));
+        _this.appendChild(fromTemplate(_this.template));
         _this.root = new Renderer(_this);
         _this.update();
         _this.toggle = true;
@@ -27,13 +27,13 @@ var DbMonTable = /** @class */ (function (_super) {
     }
     DbMonTable.prototype.update = function () {
         var _this = this;
-        this.root.set("@toggled", this.toggle);
+        this.root.update("@toggled", this.toggle);
         this.root.repeat("#row", this.databases, this.root.once && (function (row, db) {
-            row.set("@dbname", db.dbname);
-            row.set("@countClass", db.lastSample.countClassName);
-            row.set("@queryCount", db.lastSample.nbQueries);
-            row.set("@dbclass", _this.toggle ? "dbtestclass1" : null);
-            row.set("@dbclass2", _this.toggle ? "dbtestclass2" : "");
+            row.update("@dbname", db.dbname);
+            row.update("@countClass", db.lastSample.countClassName);
+            row.update("@queryCount", db.lastSample.nbQueries);
+            row.update("@dbclass", _this.toggle ? "dbtestclass1" : null);
+            row.update("@dbclass2", _this.toggle ? "dbtestclass2" : "");
             row.componentOnNode("@queries", DbMonQueryList).update(db.lastSample.topFiveQueries);
         }));
     };
@@ -48,4 +48,4 @@ var DbMonTable = /** @class */ (function (_super) {
     };
     return DbMonTable;
 }(HTMLElement));
-window["customElements"].define('db-mon-table', DbMonTable);
+customElements.define('db-mon-table', DbMonTable);

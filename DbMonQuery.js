@@ -7,9 +7,9 @@ var DbMonQuery = /** @class */ (function () {
         this.root = root;
     };
     DbMonQuery.prototype.update = function (queryModel) {
-        this.root.set("@formatElapsed", queryModel.formatElapsed);
-        this.root.set("@query", queryModel.query);
-        this.root.set("@elapsedClass", queryModel.elapsedClassName);
+        this.root.update("@formatElapsed", queryModel.formatElapsed);
+        this.root.update("@query", queryModel.query);
+        this.root.update("@elapsedClass", queryModel.elapsedClassName);
     };
     return DbMonQuery;
 }());

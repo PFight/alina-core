@@ -57,7 +57,7 @@ class AltRepeat implements AltComponent {
 
       // Create node
       if (!itemContext.node) {
-        itemContext.node = instantiateTemplate(props.template);
+        itemContext.node = fromTemplate(props.template);
         itemContext.renderer = new Renderer([{ node: itemContext.node, queryType: QueryType.Node }]);
       }
 

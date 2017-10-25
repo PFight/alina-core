@@ -32,7 +32,7 @@ var AltRepeat = /** @class */ (function () {
             }
             // Create node
             if (!itemContext.node) {
-                itemContext.node = instantiateTemplate(props.template);
+                itemContext.node = fromTemplate(props.template);
                 itemContext.renderer = new Renderer([{ node: itemContext.node, queryType: QueryType.Node }]);
             }
             // Insert to parent

@@ -10,14 +10,14 @@ function makeTemplate(str) {
     // document.body.appendChild(elem);
     return elem;
 }
-function instantiateTemplate(templateElem) {
+function fromTemplate(templateElem) {
     return templateElem.content ?
         (templateElem.content.firstElementChild || templateElem.content.firstChild).cloneNode(true)
         :
             (templateElem.firstElementChild || templateElem.firstChild).cloneNode(true);
 }
 function replaceFromTempalte(elemToReplace, templateElem) {
-    var elem = instantiateTemplate(templateElem);
+    var elem = fromTemplate(templateElem);
     var parent = elemToReplace.parentElement;
     parent.replaceChild(elem, elemToReplace);
     return elem;
@@ -167,7 +167,7 @@ var Renderer = /** @class */ (function () {
         }
         return context.result;
     };
-    Renderer.prototype.componentOnStub = function (stub, component) {
+    Renderer.prototype.componentOn = function (stub, component) {
         var key = getComponentKey(stub, component);
         var context = this.context[key];
         if (!context) {
@@ -180,8 +180,8 @@ var Renderer = /** @class */ (function () {
         }
         return context.componentInstance;
     };
-    Renderer.prototype.set = function (stub, value) {
-        this.componentOnStub(stub, AltSet).set(value);
+    Renderer.prototype.update = function (stub, value) {
+        this.componentOn(stub, AltSet).update(value);
     };
     Renderer.prototype.repeat = function (templateSelector, items, update) {
         this.componentOnNode(templateSelector, AltRepeat).repeat(items, update);
@@ -224,50 +224,27 @@ function findTextNode(searchText, current) {
         }
     }
 }
-function createIdlSetter(idlName) {
-    return function (oldVal, newVal) {
-        var currentVal = this[idlName];
-        if (typeof (currentVal) == "string") {
-            this[idlName] = currentVal.replace(oldVal, newVal);
-        }
-        else {
-            this[idlName] = newVal;
-        }
-    };
-}
-var CUSTOM_ATTRIBUTE_SETTERS = {
-    "class": function (oldVal, newVal) {
-        var preparedValue = (!newVal) ? "" : newVal + " ";
-        this.className = this.className.replace(oldVal, preparedValue);
-        return preparedValue;
-    },
-    "for": createIdlSetter("htmlFor")
-};
-function fillBindings(node, qeury, bindings, queryType) {
+function fillBindings(node, query, bindings, queryType) {
     if (!queryType || queryType == QueryType.NodeTextContent) {
         if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
-            var parts = node.textContent.split(qeury);
+            var parts = node.textContent.split(query);
             if (parts.length > 1) {
                 // Split content, to make stub separate node 
                 // and save this node to context.stubNodes
                 var nodeParent = node.parentNode;
                 nodeParent.removeChild(node);
-                var _loop_1 = function (i) {
+                for (var i = 0; i < parts.length - 1; i++) {
                     var part = parts[i];
                     if (part.length > 0) {
                         nodeParent.appendChild(document.createTextNode(part));
                     }
-                    var stubNode = document.createTextNode("");
+                    var stubNode = document.createTextNode(query);
                     bindings.push({
                         node: stubNode,
                         queryType: QueryType.NodeTextContent,
-                        query: qeury,
-                        setter: function (oldVal, newVal) { return stubNode.textContent = newVal; }
+                        query: query
                     });
                     nodeParent.appendChild(stubNode);
-                };
-                for (var i = 0; i < parts.length - 1; i++) {
-                    _loop_1(i);
                 }
                 var lastPart = parts[parts.length - 1];
                 if (lastPart) {
@@ -277,33 +254,25 @@ function fillBindings(node, qeury, bindings, queryType) {
         }
     }
     if ((!queryType || queryType == QueryType.NodeAttribute) && node.attributes) {
-        var _loop_2 = function (i) {
+        for (var i = 0; i < node.attributes.length; i++) {
             var attr = node.attributes[i];
-            if (attr.value && attr.value.indexOf(qeury) >= 0) {
-                var setter = CUSTOM_ATTRIBUTE_SETTERS[attr.name];
-                if (!setter) {
-                    if (attr.name in node) {
-                        setter = createIdlSetter(attr.name);
-                    }
-                    else {
-                        setter = function (oldVal, newVal) { return attr.value = attr.value.replace(oldVal, newVal); };
-                    }
+            if (attr.value && attr.value.indexOf(query) >= 0) {
+                var idlName = ATTRIBUTE_TO_IDL_MAP[attr.name] || attr.name;
+                if (!(idlName in node)) {
+                    idlName = null;
                 }
                 bindings.push({
                     node: node,
-                    query: qeury,
+                    query: query,
                     attributeName: attr.name,
-                    queryType: QueryType.NodeAttribute,
-                    setter: setter.bind(node)
+                    idlName: idlName,
+                    queryType: QueryType.NodeAttribute
                 });
             }
-        };
-        for (var i = 0; i < node.attributes.length; i++) {
-            _loop_2(i);
         }
     }
     for (var i = 0; i < node.childNodes.length; i++) {
-        fillBindings(node.childNodes[i], qeury, bindings);
+        fillBindings(node.childNodes[i], query, bindings);
     }
 }
 function getComponentKey(key, component) {
@@ -328,3 +297,7 @@ function hashCode(str) {
     return hash;
 }
 ;
+var ATTRIBUTE_TO_IDL_MAP = {
+    "class": "className",
+    "for": "htmlFor"
+};

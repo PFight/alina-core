@@ -18,7 +18,7 @@ class DbMonTable extends HTMLElement {
     super();
     this.databases = [];
     // this.template = document.getElementById("component-template");
-    this.appendChild(instantiateTemplate(this.template));
+    this.appendChild(fromTemplate(this.template));
     this.root = new Renderer(this);
     this.update();
 
@@ -51,14 +51,14 @@ class DbMonTable extends HTMLElement {
   `)
 
   update() {
-    this.root.set("@toggled", this.toggle);
+    this.root.update("@toggled", this.toggle);
 
     this.root.repeat("#row", this.databases, this.root.once && ((row, db) => {
-      row.set("@dbname", db.dbname);
-      row.set("@countClass", db.lastSample.countClassName);
-      row.set("@queryCount", db.lastSample.nbQueries);
-      row.set("@dbclass", this.toggle ? "dbtestclass1" : null);
-      row.set("@dbclass2", this.toggle ? "dbtestclass2" : "");
+      row.update("@dbname", db.dbname);
+      row.update("@countClass", db.lastSample.countClassName);
+      row.update("@queryCount", db.lastSample.nbQueries);
+      row.update("@dbclass", this.toggle ? "dbtestclass1" : null);
+      row.update("@dbclass2", this.toggle ? "dbtestclass2" : "");
       row.componentOnNode("@queries", DbMonQueryList).update(db.lastSample.topFiveQueries);
     }));
   }
@@ -74,5 +74,4 @@ class DbMonTable extends HTMLElement {
     setTimeout(this.run.bind(this), window["ENV"].timeout);
   }
 }
-window["customElements"].define('db-mon-table', DbMonTable);
-
+customElements.define('db-mon-table', DbMonTable);
