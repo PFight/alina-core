@@ -289,11 +289,10 @@ function fillBindings(node, query, bindings, queryType) {
                 // Split content, to make stub separate node 
                 // and save this node to context.stubNodes
                 var nodeParent = node.parentNode;
-                nodeParent.removeChild(node);
                 for (var i = 0; i < parts.length - 1; i++) {
                     var part = parts[i];
                     if (part.length > 0) {
-                        nodeParent.appendChild(document.createTextNode(part));
+                        nodeParent.insertBefore(document.createTextNode(part), node);
                     }
                     var stubNode = document.createTextNode(query);
                     bindings.push({
@@ -301,12 +300,13 @@ function fillBindings(node, query, bindings, queryType) {
                         queryType: QueryType.NodeTextContent,
                         query: query
                     });
-                    nodeParent.appendChild(stubNode);
+                    nodeParent.insertBefore(stubNode, node);
                 }
                 var lastPart = parts[parts.length - 1];
                 if (lastPart && lastPart.length > 0) {
-                    nodeParent.appendChild(document.createTextNode(lastPart));
+                    nodeParent.insertBefore(document.createTextNode(lastPart), node);
                 }
+                nodeParent.removeChild(node);
             }
         }
     }

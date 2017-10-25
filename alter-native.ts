@@ -333,11 +333,10 @@ function fillBindings(node: Node, query: string, bindings: NodeBinding[], queryT
         // Split content, to make stub separate node 
         // and save this node to context.stubNodes
         let nodeParent = node.parentNode;
-        nodeParent.removeChild(node);
         for (let i = 0; i < parts.length - 1; i++) {
           let part = parts[i];
           if (part.length > 0) {
-            nodeParent.appendChild(document.createTextNode(part));
+            nodeParent.insertBefore(document.createTextNode(part), node);
           }
           let stubNode = document.createTextNode(query);
           bindings.push({
@@ -345,12 +344,13 @@ function fillBindings(node: Node, query: string, bindings: NodeBinding[], queryT
             queryType: QueryType.NodeTextContent,
             query: query
           });
-          nodeParent.appendChild(stubNode);
+          nodeParent.insertBefore(stubNode, node);
         }
         let lastPart = parts[parts.length - 1];
         if (lastPart && lastPart.length > 0) {
-          nodeParent.appendChild(document.createTextNode(lastPart));
+          nodeParent.insertBefore(document.createTextNode(lastPart), node);
         }
+        nodeParent.removeChild(node);
       }
     }
   }
