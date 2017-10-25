@@ -290,7 +290,7 @@ function fillBindings(node: Node, query: string, bindings: NodeBinding[], queryT
           nodeParent.appendChild(stubNode);
         }
         let lastPart = parts[parts.length - 1];
-        if (lastPart) {
+        if (lastPart && lastPart.length > 0) {
           nodeParent.appendChild(document.createTextNode(lastPart));
         }
       }
@@ -316,7 +316,13 @@ function fillBindings(node: Node, query: string, bindings: NodeBinding[], queryT
   }
 
   for (let i = 0; i < node.childNodes.length; i++) {
+    let lengthBefore = node.childNodes.length;
     fillBindings(node.childNodes[i], query, bindings);
+    let lengthAfter = node.childNodes.length;
+    // Node can be replaced by several other nodes
+    if (lengthAfter > lengthBefore) {
+      i += lengthAfter - lengthBefore;
+    } 
   }
 }
 
