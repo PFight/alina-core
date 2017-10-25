@@ -52,14 +52,15 @@ class DbMonTable extends HTMLElement {
 
   update() {
     this.root.set("@toggled", this.toggle);
-    this.root.repeat("#row", this.databases, (row, db) => {
+
+    this.root.repeat("#row", this.databases, this.root.once && ((row, db) => {
       row.set("@dbname", db.dbname);
       row.set("@countClass", db.lastSample.countClassName);
       row.set("@queryCount", db.lastSample.nbQueries);
       row.set("@dbclass", this.toggle ? "dbtestclass1" : null);
       row.set("@dbclass2", this.toggle ? "dbtestclass2" : "");
-      row.send(db.lastSample.topFiveQueries).into("@queries", DbMonQueryList);
-    });
+      row.componentOnNode("@queries", DbMonQueryList).update(db.lastSample.topFiveQueries);
+    }));
   }
 
   connectedCallback() {

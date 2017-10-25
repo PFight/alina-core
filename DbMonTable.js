@@ -28,14 +28,14 @@ var DbMonTable = /** @class */ (function (_super) {
     DbMonTable.prototype.update = function () {
         var _this = this;
         this.root.set("@toggled", this.toggle);
-        this.root.repeat("#row", this.databases, function (row, db) {
+        this.root.repeat("#row", this.databases, this.root.once && (function (row, db) {
             row.set("@dbname", db.dbname);
             row.set("@countClass", db.lastSample.countClassName);
             row.set("@queryCount", db.lastSample.nbQueries);
             row.set("@dbclass", _this.toggle ? "dbtestclass1" : null);
             row.set("@dbclass2", _this.toggle ? "dbtestclass2" : "");
-            row.send(db.lastSample.topFiveQueries).into("@queries", DbMonQueryList);
-        });
+            row.componentOnNode("@queries", DbMonQueryList).update(db.lastSample.topFiveQueries);
+        }));
     };
     DbMonTable.prototype.connectedCallback = function () {
         this.run();

@@ -4,13 +4,12 @@
   elapsedClassName: string;
 }
 
-class DbMonQuery implements AltComponent<Query> {
+class DbMonQuery implements AltComponent {
   root: Renderer;
 
-  initialize(elem, props) {
-    let rootElem = replaceFromTempalte(elem, this.template);
-    this.root = new Renderer(rootElem);
-    return rootElem;
+  initialize(root: Renderer) {
+    root.elem = replaceFromTempalte(root.elem, this.template) as HTMLElement;
+    this.root = root;
   }
 
   template = makeTemplate(`
@@ -23,9 +22,9 @@ class DbMonQuery implements AltComponent<Query> {
       </td>
   `);
 
-  update(props: Query) {
-    this.root.set("@formatElapsed", props.formatElapsed);
-    this.root.set("@query", props.query);
-    this.root.set("@elapsedClass", props.elapsedClassName);
+  update(queryModel: Query) {
+    this.root.set("@formatElapsed", queryModel.formatElapsed);
+    this.root.set("@query", queryModel.query);
+    this.root.set("@elapsedClass", queryModel.elapsedClassName);
   }
 }

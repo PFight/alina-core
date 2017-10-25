@@ -1,3 +1,9 @@
+var QueryType;
+(function (QueryType) {
+    QueryType[QueryType["Node"] = 0] = "Node";
+    QueryType[QueryType["NodeAttribute"] = 1] = "NodeAttribute";
+    QueryType[QueryType["NodeTextContent"] = 2] = "NodeTextContent";
+})(QueryType || (QueryType = {}));
 function makeTemplate(str) {
     var elem = document.createElement("template");
     elem.innerHTML = str;
@@ -28,115 +34,196 @@ function compare(a, b, comparer) {
         (definedNotNull(a) && definedNotNull(b) && comparer && comparer(a, b));
 }
 var Renderer = /** @class */ (function () {
-    function Renderer(elem) {
-        this.elem = elem;
+    function Renderer(nodeOrBindings) {
+        if (Array.isArray(nodeOrBindings)) {
+            this.bindings = nodeOrBindings;
+        }
+        else {
+            this.bindings = [{
+                    node: nodeOrBindings,
+                    queryType: QueryType.Node
+                }];
+        }
         this.context = {};
     }
-    Renderer.prototype.repeat = function (templateSelector, modelItems, updateFunc, equals) {
-        var template = this.elem.querySelector(templateSelector);
-        var container = template.parentElement;
-        return this.repeatEx(templateSelector, template, container, null, modelItems, updateFunc, equals);
+    Object.defineProperty(Renderer.prototype, "once", {
+        get: function () {
+            if (!this.onceFlag) {
+                this.onceFlag = true;
+                return true;
+            }
+            return false;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Renderer.prototype, "elem", {
+        get: function () {
+            return this.node;
+        },
+        set: function (elem) {
+            this.node = elem;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Renderer.prototype, "node", {
+        get: function () {
+            return this.bindings[0].node;
+        },
+        set: function (node) {
+            var binding = this.bindings[0];
+            if (!binding) {
+                binding = this.bindings[0] = {};
+            }
+            binding.node = node;
+            binding.queryType = QueryType.Node;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Renderer.prototype, "nodes", {
+        get: function () {
+            return this.bindings.map(function (x) { return x.node; });
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Renderer.prototype.getContext = function (key, createContext) {
+        var context = this.context[key];
+        if (!context) {
+            context = this.context[key] = createContext ? createContext() : {};
+        }
+        return context;
     };
-    Renderer.prototype.repeatEx = function (key, template, container, insertBefore, modelItems, updateFunc, equals) {
+    Renderer.prototype.componentOnNode = function (selectorOrText, component) {
+        var key = getComponentKey(selectorOrText, component);
         var context = this.context[key];
         if (!context) {
             context = this.context[key] = {};
-            context.itemContexts = [];
+            var result = void 0;
+            try {
+                result = this.querySelectorInternal(selectorOrText);
+            }
+            catch (_a) { }
+            if (!result) {
+                result = this.findNodeInternal(selectorOrText);
+            }
+            var renderer = new Renderer([{
+                    node: result,
+                    queryType: QueryType.Node,
+                    query: selectorOrText
+                }]);
+            context.componentInstance = new component();
+            context.componentInstance.initialize(renderer);
         }
-        // Add new and update existing
-        for (var i = 0; i < modelItems.length; i++) {
-            var modelItem = modelItems[i];
-            // Createcontext
-            var itemContext = context.itemContexts[i];
-            if (!itemContext || !compare(modelItem, itemContext.oldModelItem, equals)) {
-                itemContext = context.itemContexts[i] = {};
-            }
-            // Create node
-            if (!itemContext.node) {
-                itemContext.node = instantiateTemplate(template);
-                itemContext.renderer = new Renderer(itemContext.node);
-            }
-            // Insert to parent
-            if (!itemContext.mounted) {
-                var position = i == 0 ? insertBefore : context.itemContexts[i - 1].node.nextSibling;
-                if (position) {
-                    container.insertBefore(itemContext.node, position);
-                }
-                else {
-                    container.appendChild(itemContext.node);
-                }
-                itemContext.mounted = true;
-            }
-            // Fill content
-            updateFunc(itemContext.renderer, modelItem);
-            itemContext.oldModelItem = modelItem;
-        }
-        // Remove old
-        var firstIndexToRemove = modelItems.length;
-        for (var i = firstIndexToRemove; i < context.itemContexts.length; i++) {
-            var elem = context.itemContexts[i].node;
-            if (elem) {
-                container.removeChild(elem);
-            }
-        }
-        context.itemContexts.splice(firstIndexToRemove, context.itemContexts.length - firstIndexToRemove);
-        return this;
+        return context.componentInstance;
     };
-    Renderer.prototype.set = function (stub, value) {
-        var context = this.context[stub];
+    Renderer.prototype.webComponent = function (selector, component) {
+        var key = getComponentKey(selector, component);
+        var context = this.context[key];
         if (!context) {
-            context = this.context[stub] = {};
+            context = this.context[key] = {};
+            var result = this.querySelectorInternal(selector);
+            if (customElements.get(result.nodeName.toLowerCase()) == component) {
+                context.componentInstance = result;
+            }
+            else {
+                throw new Error("Component do not match element");
+            }
         }
-        if (context.setters === undefined) {
-            context.setters = [];
-            fillSetters(this.elem, stub, context.setters);
-            context.lastValue = stub;
-        }
-        if (context.lastValue != value) {
-            var newLastValue_1 = value;
-            context.setters.forEach(function (setter) {
-                var result = setter(context.lastValue, value);
-                if (result !== undefined) {
-                    newLastValue_1 = result;
-                }
-            });
-            context.lastValue = newLastValue_1;
-        }
-        return this;
+        return context.componentInstance;
     };
-    Renderer.prototype.send = function (props) {
-        var c = new PropsContainer();
-        c.props = props;
-        c.renderer = this;
-        return c;
+    Renderer.prototype.component = function (key, componentCtor) {
+        var componentKey = getComponentKey(key, componentCtor);
+        var context = this.getContext(componentKey);
+        if (!context.instance) {
+            context.instance = new componentCtor();
+            context.instance.initialize(this);
+        }
+        return context.instance;
     };
-    Renderer.prototype.mount = function (selector, component, props) {
+    Renderer.prototype.findNode = function (text, callback) {
+        var context = this.context[text];
+        if (!context) {
+            context = this.context[text] = {};
+            for (var i = 0; i < this.bindings.length && !context.result; i++) {
+                context.result = findTextNode(text, this.bindings[i].node);
+            }
+        }
+        if (callback) {
+            callback(context.result);
+        }
+        return context.result;
+    };
+    Renderer.prototype.querySelector = function (selector, callback) {
         var context = this.context[selector];
         if (!context) {
             context = this.context[selector] = {};
-            var elem = void 0;
-            try {
-                elem = this.elem.matches(selector) ? this.elem : this.elem.querySelector(selector);
-            }
-            catch (_a) { }
-            if (!elem) {
-                elem = findTextNode(selector, this.elem);
-            }
-            context.componentInstance = new component();
-            context.componentInstance.initialize(elem, props);
+            context.result = this.querySelectorInternal(selector);
         }
-        context.componentInstance.update(props);
+        if (callback) {
+            callback(context.result);
+        }
+        return context.result;
+    };
+    Renderer.prototype.componentOnStub = function (stub, component) {
+        var key = getComponentKey(stub, component);
+        var context = this.context[key];
+        if (!context) {
+            context = this.context[key] = {};
+            var bindings_1 = [];
+            this.nodes.forEach(function (x) { return fillBindings(x, stub, bindings_1); });
+            var renderer = new Renderer(bindings_1);
+            context.componentInstance = new component();
+            context.componentInstance.initialize(renderer);
+        }
+        return context.componentInstance;
+    };
+    Renderer.prototype.set = function (stub, value) {
+        this.componentOnStub(stub, AltSet).set(value);
+    };
+    Renderer.prototype.repeat = function (templateSelector, items, update) {
+        this.componentOnNode(templateSelector, AltRepeat).repeat(items, update);
+    };
+    Renderer.prototype.findNodeInternal = function (text) {
+        var result;
+        for (var i = 0; i < this.bindings.length && !result; i++) {
+            result = findTextNode(text, this.bindings[i].node);
+        }
+        return result;
+    };
+    Renderer.prototype.querySelectorInternal = function (selector) {
+        var result;
+        for (var i = 0; i < this.bindings.length && !result; i++) {
+            var node = this.bindings[i].node;
+            if (node.nodeType == Node.ELEMENT_NODE) {
+                var elem = node;
+                if (elem.matches(selector)) {
+                    result = elem;
+                }
+                else {
+                    result = elem.querySelector(selector);
+                }
+            }
+        }
+        return result;
     };
     return Renderer;
 }());
-var PropsContainer = /** @class */ (function () {
-    function PropsContainer() {
+function findTextNode(searchText, current) {
+    if (current.nodeType == Node.TEXT_NODE || current.nodeType == Node.COMMENT_NODE) {
+        if (current.textContent && current.textContent.indexOf(searchText) >= 0) {
+            return current;
+        }
     }
-    PropsContainer.prototype.into = function (selector, component) {
-        return this.renderer.mount(selector, component, this.props);
-    };
-    return PropsContainer;
-}());
+    for (var i = 0; i < current.childNodes.length; i++) {
+        var result = findTextNode(searchText, current.childNodes[i]);
+        if (result) {
+            return result;
+        }
+    }
+}
 function createIdlSetter(idlName) {
     return function (oldVal, newVal) {
         var currentVal = this[idlName];
@@ -156,36 +243,43 @@ var CUSTOM_ATTRIBUTE_SETTERS = {
     },
     "for": createIdlSetter("htmlFor")
 };
-function fillSetters(node, stub, setters) {
-    if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
-        var parts = node.textContent.split(stub);
-        if (parts.length > 1) {
-            // Split content, to make stub separate node 
-            // and save this node to context.stubNodes
-            var nodeParent = node.parentNode;
-            nodeParent.removeChild(node);
-            var _loop_1 = function (i) {
-                var part = parts[i];
-                if (part.length > 0) {
-                    nodeParent.appendChild(document.createTextNode(part));
+function fillBindings(node, qeury, bindings, queryType) {
+    if (!queryType || queryType == QueryType.NodeTextContent) {
+        if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
+            var parts = node.textContent.split(qeury);
+            if (parts.length > 1) {
+                // Split content, to make stub separate node 
+                // and save this node to context.stubNodes
+                var nodeParent = node.parentNode;
+                nodeParent.removeChild(node);
+                var _loop_1 = function (i) {
+                    var part = parts[i];
+                    if (part.length > 0) {
+                        nodeParent.appendChild(document.createTextNode(part));
+                    }
+                    var stubNode = document.createTextNode("");
+                    bindings.push({
+                        node: stubNode,
+                        queryType: QueryType.NodeTextContent,
+                        query: qeury,
+                        setter: function (oldVal, newVal) { return stubNode.textContent = newVal; }
+                    });
+                    nodeParent.appendChild(stubNode);
+                };
+                for (var i = 0; i < parts.length - 1; i++) {
+                    _loop_1(i);
                 }
-                var stubNode = document.createTextNode("");
-                setters.push(function (oldVal, newVal) { return stubNode.textContent = newVal; });
-                nodeParent.appendChild(stubNode);
-            };
-            for (var i = 0; i < parts.length - 1; i++) {
-                _loop_1(i);
-            }
-            var lastPart = parts[parts.length - 1];
-            if (lastPart) {
-                nodeParent.appendChild(document.createTextNode(lastPart));
+                var lastPart = parts[parts.length - 1];
+                if (lastPart) {
+                    nodeParent.appendChild(document.createTextNode(lastPart));
+                }
             }
         }
     }
-    if (node.attributes) {
+    if ((!queryType || queryType == QueryType.NodeAttribute) && node.attributes) {
         var _loop_2 = function (i) {
             var attr = node.attributes[i];
-            if (attr.value && attr.value.indexOf(stub) >= 0) {
+            if (attr.value && attr.value.indexOf(qeury) >= 0) {
                 var setter = CUSTOM_ATTRIBUTE_SETTERS[attr.name];
                 if (!setter) {
                     if (attr.name in node) {
@@ -195,7 +289,13 @@ function fillSetters(node, stub, setters) {
                         setter = function (oldVal, newVal) { return attr.value = attr.value.replace(oldVal, newVal); };
                     }
                 }
-                setters.push(setter.bind(node));
+                bindings.push({
+                    node: node,
+                    query: qeury,
+                    attributeName: attr.name,
+                    queryType: QueryType.NodeAttribute,
+                    setter: setter.bind(node)
+                });
             }
         };
         for (var i = 0; i < node.attributes.length; i++) {
@@ -203,19 +303,28 @@ function fillSetters(node, stub, setters) {
         }
     }
     for (var i = 0; i < node.childNodes.length; i++) {
-        fillSetters(node.childNodes[i], stub, setters);
+        fillBindings(node.childNodes[i], qeury, bindings);
     }
 }
-function findTextNode(searchText, current) {
-    if (current.nodeType == Node.TEXT_NODE || current.nodeType == Node.COMMENT_NODE) {
-        if (current.textContent && current.textContent.indexOf(searchText) >= 0) {
-            return current;
-        }
+function getComponentKey(key, component) {
+    var result = key || "";
+    if (component.name) {
+        result += component.name;
     }
-    for (var i = 0; i < current.childNodes.length; i++) {
-        var result = findTextNode(searchText, current.childNodes[i]);
-        if (result) {
-            return result;
-        }
+    else {
+        result += hashCode(component.toString());
     }
+    return result;
 }
+function hashCode(str) {
+    var hash = 0, i, chr;
+    if (str.length === 0)
+        return hash;
+    for (i = 0; i < str.length; i++) {
+        chr = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return hash;
+}
+;

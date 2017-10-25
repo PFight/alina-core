@@ -30,7 +30,9 @@
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="alter-native.ts" />
-    <TypeScriptCompile Include="app.ts" />
+    <TypeScriptCompile Include="AltSet.ts" />
+    <TypeScriptCompile Include="AltRepeat.ts" />
+    <TypeScriptCompile Include="DbMonTable.ts" />
     <TypeScriptCompile Include="DbMonQuery.ts" />
     <TypeScriptCompile Include="DbMonQueryList.ts" />
   </ItemGroup>
