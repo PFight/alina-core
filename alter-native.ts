@@ -61,7 +61,8 @@ function compare(a, b, comparer) {
 class Renderer {
   context: { [key: string]: any };
   bindings: NodeBinding[];
-  onceFlag: boolean;
+  protected onceFlag: boolean;
+  protected onLastValue;
 
   constructor(node: Node);
   constructor(bindings: NodeBinding[]);
@@ -90,6 +91,10 @@ class Renderer {
   }
   set elem(elem: HTMLElement) {
     this.node = elem;
+  }
+
+  nodeAs<T extends Node>() {
+    return this.node as T;
   }
 
   get node(): Node {
@@ -175,30 +180,68 @@ class Renderer {
     return context.instance;
   }
 
-  findNode(text: string, callback?: (el: Node) => void): Node {
+  findTextNode(text: string): Renderer {
     let context = this.context[text];
     if (!context) {
       context = this.context[text] = {};
       for (let i = 0; i < this.bindings.length && !context.result; i++) {
-        context.result = findTextNode(text, this.bindings[i].node) as Element;
+        let elem = findTextNode(text, this.bindings[i].node) as Element;
+        if (elem) {
+          context.result = new Renderer(elem);
+        }
       }
-    }
-    if (callback) {
-      callback(context.result);
     }
     return context.result;
   }
 
-  querySelector(selector: string, callback?: (el: HTMLElement) => void): HTMLElement {
+  querySelector(selector: string): Renderer {
     let context = this.context[selector];
     if (!context) {
-      context = this.context[selector] = {};
-      context.result = this.querySelectorInternal(selector);
-    }
-    if (callback) {
-      callback(context.result);
+      context = this.context[selector] = {
+        result: new Renderer(this.querySelectorInternal(selector));
+      }
     }
     return context.result;
+  }
+
+  querySelectorAll(selector: string): Renderer {
+    let context = this.context[selector];
+    if (!context) {
+      context = this.context[selector] = {
+        result: new Renderer(
+          this.querySelectorAllInternal(selector).map(x => ({
+            node: x,
+            queryType: QueryType.Node,
+            query: selector
+          } as NodeBinding))
+        )
+      };
+    }
+    return context.result;
+  }
+
+  findAll(stub: string): Renderer {
+    let context = this.context[stub];
+    if (!context) {
+      context = this.context[stub] = {};
+      let bindings: NodeBinding[] = [];
+      this.nodes.forEach(x => fillBindings(x, stub, bindings));
+      context.renderer = new Renderer(bindings);      
+    }
+    return context.renderer;
+  }
+
+  on<T>(value: T, callback: (renderer: Renderer, value?: T, prevValue?: T) => T | void, key?: string) {
+    let lastValue = key ? this.context[key] : this.onLastValue;
+    if (this.onLastValue !== value) {
+      let result = callback(this, value, this.onLastValue);
+      let lastValue = result !== undefined ? result : value;
+      if (key) {
+        this.context[key] = lastValue;
+      } else {
+        this.onLastValue = lastValue;
+      }
+    }
   }
 
   componentOn<ComponentT extends AltComponent>(stub: string,
@@ -243,6 +286,21 @@ class Renderer {
         } else {
           result = elem.querySelector(selector);
         }
+      }
+    }
+    return result;
+  }
+
+  protected querySelectorAllInternal(selector: string) {
+    let result: Element[] = [];
+    for (let i = 0; i < this.bindings.length && !result; i++) {
+      let node = this.bindings[i].node;
+      if (node.nodeType == Node.ELEMENT_NODE) {
+        let elem = node as HTMLElement;
+        if (elem.matches(selector)) {
+          result.push(elem);
+        }
+        result = result.concat(elem.querySelectorAll(selector) as any);
       }
     }
     return result;

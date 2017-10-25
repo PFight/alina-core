@@ -69,6 +69,9 @@ var Renderer = /** @class */ (function () {
         enumerable: true,
         configurable: true
     });
+    Renderer.prototype.nodeAs = function () {
+        return this.node;
+    };
     Object.defineProperty(Renderer.prototype, "node", {
         get: function () {
             return this.bindings[0].node;
@@ -149,38 +152,72 @@ var Renderer = /** @class */ (function () {
         }
         return context.instance;
     };
-    Renderer.prototype.findNode = function (text, callback) {
+    Renderer.prototype.findTextNode = function (text) {
         var context = this.context[text];
         if (!context) {
             context = this.context[text] = {};
             for (var i = 0; i < this.bindings.length && !context.result; i++) {
-                context.result = findTextNode(text, this.bindings[i].node);
+                var elem = findTextNode(text, this.bindings[i].node);
+                if (elem) {
+                    context.result = new Renderer(elem);
+                }
             }
-        }
-        if (callback) {
-            callback(context.result);
         }
         return context.result;
     };
-    Renderer.prototype.querySelector = function (selector, callback) {
+    Renderer.prototype.querySelector = function (selector) {
         var context = this.context[selector];
         if (!context) {
-            context = this.context[selector] = {};
-            context.result = this.querySelectorInternal(selector);
-        }
-        if (callback) {
-            callback(context.result);
+            context = this.context[selector] = {
+                result: new Renderer(this.querySelectorInternal(selector))
+            };
         }
         return context.result;
+    };
+    Renderer.prototype.querySelectorAll = function (selector) {
+        var context = this.context[selector];
+        if (!context) {
+            context = this.context[selector] = {
+                result: new Renderer(this.querySelectorAllInternal(selector).map(function (x) { return ({
+                    node: x,
+                    queryType: QueryType.Node,
+                    query: selector
+                }); }))
+            };
+        }
+        return context.result;
+    };
+    Renderer.prototype.findAll = function (stub) {
+        var context = this.context[stub];
+        if (!context) {
+            context = this.context[stub] = {};
+            var bindings_1 = [];
+            this.nodes.forEach(function (x) { return fillBindings(x, stub, bindings_1); });
+            context.renderer = new Renderer(bindings_1);
+        }
+        return context.renderer;
+    };
+    Renderer.prototype.on = function (value, callback, key) {
+        var lastValue = key ? this.context[key] : this.onLastValue;
+        if (this.onLastValue !== value) {
+            var result = callback(this, value, this.onLastValue);
+            var lastValue_1 = result !== undefined ? result : value;
+            if (key) {
+                this.context[key] = lastValue_1;
+            }
+            else {
+                this.onLastValue = lastValue_1;
+            }
+        }
     };
     Renderer.prototype.componentOn = function (stub, component) {
         var key = getComponentKey(stub, component);
         var context = this.context[key];
         if (!context) {
             context = this.context[key] = {};
-            var bindings_1 = [];
-            this.nodes.forEach(function (x) { return fillBindings(x, stub, bindings_1); });
-            var renderer = new Renderer(bindings_1);
+            var bindings_2 = [];
+            this.nodes.forEach(function (x) { return fillBindings(x, stub, bindings_2); });
+            var renderer = new Renderer(bindings_2);
             context.componentInstance = new component();
             context.componentInstance.initialize(renderer);
         }
@@ -211,6 +248,20 @@ var Renderer = /** @class */ (function () {
                 else {
                     result = elem.querySelector(selector);
                 }
+            }
+        }
+        return result;
+    };
+    Renderer.prototype.querySelectorAllInternal = function (selector) {
+        var result = [];
+        for (var i = 0; i < this.bindings.length && !result; i++) {
+            var node = this.bindings[i].node;
+            if (node.nodeType == Node.ELEMENT_NODE) {
+                var elem = node;
+                if (elem.matches(selector)) {
+                    result.push(elem);
+                }
+                result = result.concat(elem.querySelectorAll(selector));
             }
         }
         return result;

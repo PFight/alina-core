@@ -13,6 +13,9 @@ class DbMonTable extends HTMLElement {
   databases: Database[];
   root: Renderer;
   toggle: boolean;
+  inputValue: string = "";
+  started: boolean = true;
+  timeout: number;
 
   constructor() {
     super();
@@ -31,7 +34,11 @@ class DbMonTable extends HTMLElement {
 
   template = makeTemplate(`
     <div>
-        <input disabled="@toggled" />
+        <div>
+          <input disabled="@toggled" oninput=@inputChange /> 
+          You entered: @inputText
+          <button onclick=@onStartStopClick >@startStopButtonText</button>
+        </div>
         <table class="table table-striped latest-data">
           <tbody>
             <template id="row">
@@ -51,7 +58,14 @@ class DbMonTable extends HTMLElement {
   `)
 
   update() {
-    this.root.update("@toggled", this.toggle);
+    this.root.update("@toggled", !this.toggle);
+    this.root.update("@inputChange", this.onInputChange);
+    this.root.update("@inputText", this.inputValue);
+    this.root.update("@onStartStopClick", this.onStartStop);
+    this.root.update("@startStopButtonText", this.started ? "Стоп" : "Старт");
+    this.root.querySelector("input").on(this.toggle, (input) => {
+      input.nodeAs<HTMLInputElement>().style.backgroundColor = this.toggle ? "white" : "yellow";
+    });
 
     this.root.repeat("#row", this.databases, this.root.once && ((row, db) => {
       row.update("@dbname", db.dbname);
@@ -63,6 +77,20 @@ class DbMonTable extends HTMLElement {
     }));
   }
 
+  onInputChange = (ev: Event) => {
+    this.inputValue = (ev.target as HTMLInputElement).value;
+    this.update();
+  }
+
+  onStartStop = () => {
+    if (this.started) {
+      this.stop();
+    } else {
+      this.run();
+    }
+    this.update();
+  }
+
   connectedCallback() {
     this.run();
   }
@@ -71,7 +99,13 @@ class DbMonTable extends HTMLElement {
     this.databases = window["ENV"].generateData().toArray();
     this.update();
     window["Monitoring"].renderRate.ping();
-    setTimeout(this.run.bind(this), window["ENV"].timeout);
+    this.timeout = setTimeout(this.run.bind(this), window["ENV"].timeout);
+    this.started = true;
+  }
+
+  stop() {
+    clearTimeout(this.timeout);
+    this.started = false;
   }
 }
 customElements.define('db-mon-table', DbMonTable);
