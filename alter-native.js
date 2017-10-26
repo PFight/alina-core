@@ -31,24 +31,30 @@ function undefinedOrNull(x) {
     return x === undefined || x === null;
 }
 var Renderer = /** @class */ (function () {
-    function Renderer(nodeOrBindings, parent) {
-        if (Array.isArray(nodeOrBindings)) {
-            this._bindings = nodeOrBindings;
+    function Renderer(nodesOrBindings, parent) {
+        if (nodesOrBindings.length > 0) {
+            var first = nodesOrBindings[0];
+            if (first.nodeType !== undefined) {
+                this._bindings = nodesOrBindings.map(function (x) { return ({
+                    node: x,
+                    queryType: QueryType.Node
+                }); });
+            }
+            else {
+                this._bindings = nodesOrBindings;
+            }
         }
         else {
-            this._bindings = [{
-                    node: nodeOrBindings,
-                    queryType: QueryType.Node
-                }];
+            this._bindings = [];
         }
         this.context = {};
         this.parentRenderer = parent;
     }
-    Renderer.Create = function (nodeOrBindings) {
-        return Renderer.Main.create(nodeOrBindings);
+    Renderer.Create = function (nodeOrBinding) {
+        return Renderer.Main.create(nodeOrBinding);
     };
-    Renderer.CreateMulti = function (nodeOrBindings) {
-        return Renderer.Main.createMulti(nodeOrBindings);
+    Renderer.CreateMulti = function (nodesOrBindings) {
+        return Renderer.Main.createMulti(nodesOrBindings);
     };
     Object.defineProperty(Renderer.prototype, "nodes", {
         get: function () {
@@ -79,7 +85,7 @@ var Renderer = /** @class */ (function () {
     };
     Object.defineProperty(Renderer.prototype, "node", {
         get: function () {
-            return this._bindings[0].node;
+            return this._bindings.length > 0 && this._bindings[0].node || null;
         },
         set: function (node) {
             var binding = this._bindings[0];
@@ -92,11 +98,11 @@ var Renderer = /** @class */ (function () {
         enumerable: true,
         configurable: true
     });
-    Renderer.prototype.create = function (nodeOrBindings) {
-        return new Renderer(nodeOrBindings, this);
+    Renderer.prototype.create = function (nodeOrBinding) {
+        return new Renderer([nodeOrBinding], this);
     };
-    Renderer.prototype.createMulti = function (nodeOrBindings) {
-        return new Renderer(nodeOrBindings, this);
+    Renderer.prototype.createMulti = function (nodesOrBindings) {
+        return new Renderer(nodesOrBindings, this);
     };
     Object.defineProperty(Renderer.prototype, "binding", {
         get: function () {
@@ -118,7 +124,7 @@ var Renderer = /** @class */ (function () {
         if (!context.instance) {
             var sameAsParent = this.parentRenderer && this.parentRenderer.node == this.node;
             context.instance = new componentCtor();
-            context.instance.initializeMulti(this);
+            context.instance.initialize(this);
             // Component can replace current node
             if (sameAsParent && this.parentRenderer.node != this.node) {
                 this.parentRenderer.node = this.node;
@@ -166,7 +172,7 @@ var Renderer = /** @class */ (function () {
             context = this.context[entry] = {};
             var bindings_2 = [];
             this._bindings.forEach(function (x) { return _this.fillBindings(x.node, entry, bindings_2, true); });
-            context.renderer = this.create(bindings_2);
+            context.renderer = this.create(bindings_2[0]);
         }
         return context.renderer;
     };
@@ -177,7 +183,7 @@ var Renderer = /** @class */ (function () {
             context = this.context[entry] = {};
             var bindings_3 = [];
             this._bindings.forEach(function (x) { return _this.findNodesInternal(x.node, entry, bindings_3, true); });
-            context.renderer = this.create(bindings_3);
+            context.renderer = this.create(bindings_3[0]);
         }
         return context.renderer;
     };
@@ -212,7 +218,7 @@ var Renderer = /** @class */ (function () {
         }
     };
     Renderer.prototype.set = function (stub, value) {
-        this.getEntries(stub).mount(AltSet).set(value);
+        this.getEntry(stub).mount(AltSet).set(value);
     };
     Renderer.prototype.repeat = function (templateSelector, items, update) {
         this.query(templateSelector).mount(AltRepeat).repeat(items, update);
@@ -364,7 +370,7 @@ var Renderer = /** @class */ (function () {
         return hash;
     };
     ;
-    Renderer.Main = new Renderer(document.body, null);
+    Renderer.Main = new Renderer([document.body], null);
     return Renderer;
 }());
 var ATTRIBUTE_TO_IDL_MAP = {

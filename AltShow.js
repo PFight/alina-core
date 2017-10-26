@@ -2,7 +2,7 @@ var AltShow = /** @class */ (function () {
     function AltShow() {
         this.nodes = [];
     }
-    AltShow.prototype.initializeMulti = function (context) {
+    AltShow.prototype.initialize = function (context) {
         this.root = context;
     };
     AltShow.prototype.showIf = function (value) {

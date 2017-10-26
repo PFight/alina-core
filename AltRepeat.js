@@ -33,7 +33,7 @@ var AltRepeat = /** @class */ (function () {
             // Create node
             if (!itemContext.renderer) {
                 var node = fromTemplate(props.template);
-                itemContext.renderer = this.renderer.create([{ node: node, queryType: QueryType.Node }]);
+                itemContext.renderer = this.renderer.create(node);
             }
             // Fill content
             props.update(itemContext.renderer, modelItem);

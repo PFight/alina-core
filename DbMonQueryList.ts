@@ -1,7 +1,7 @@
-﻿class DbMonQueryList implements AltComponent {
-  root: Renderer;
+﻿class DbMonQueryList implements ISingleNodeComponent {
+  root: ISingleNodeRenderer;
 
-  initialize(root: Renderer) {
+  initialize(root: ISingleNodeRenderer) {
     this.root = root;
   }
 

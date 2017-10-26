@@ -1,8 +1,8 @@
-﻿class AltSet implements AltMultiComponent {
-  root: Renderer;
+﻿class AltSet implements IMultiNodeComponent {
+  root: IMultiNodeRenderer;
   lastValue: any;
 
-  initializeMulti(context: Renderer) {
+  initialize(context: IMultiNodeRenderer) {
     this.root = context;
   }
 

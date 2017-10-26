@@ -1,10 +1,10 @@
-﻿class AltShow implements AltMultiComponent {
-  root: Renderer;
+﻿class AltShow implements IMultiNodeComponent {
+  root: IMultiNodeRenderer;
   lastValue: any;
   nodes: Node[] = [];
 
 
-  initializeMulti(context: Renderer) {
+  initialize(context: IMultiNodeRenderer) {
     this.root = context;
   }
 
