@@ -4,7 +4,7 @@
   elapsedClassName: string;
 }
 
-class DbMonQuery implements AltComponent {
+class DbMonQuery implements ISingleNodeComponent {
   root: Renderer;
 
   initialize(root: Renderer) {

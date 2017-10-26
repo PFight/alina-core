@@ -16,7 +16,7 @@ interface AltRepeatContext<T> {
   update: (renderer: Renderer, model: T) => void;
 }
 
-class AltRepeat implements AltComponent {
+class AltRepeat implements ISingleNodeComponent {
   itemContexts: RepeatItemContext<any>[] = [];
   renderer: Renderer;
   context: AltRepeatContext<any>;
@@ -57,7 +57,7 @@ class AltRepeat implements AltComponent {
       // Create node
       if (!itemContext.renderer) {
         let node = fromTemplate(props.template);
-        itemContext.renderer = this.renderer.create([{ node: node, queryType: QueryType.Node }]);
+        itemContext.renderer = this.renderer.create(node);
       }
 
       // Fill content

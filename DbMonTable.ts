@@ -11,7 +11,7 @@ interface Sample {
 
 class DbMonTable extends HTMLElement {
   databases: Database[];
-  root: Renderer;
+  root: ISingleNodeRenderer;
   toggle: boolean;
   inputValue: string = "";
   started: boolean = true;

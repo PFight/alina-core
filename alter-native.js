@@ -31,25 +31,38 @@ function undefinedOrNull(x) {
     return x === undefined || x === null;
 }
 var Renderer = /** @class */ (function () {
-    function Renderer(nodeOrBindings, parent) {
-        if (Array.isArray(nodeOrBindings)) {
-            this._bindings = nodeOrBindings;
+    function Renderer(nodesOrBindings, parent) {
+        if (nodesOrBindings.length > 0) {
+            var first = nodesOrBindings[0];
+            if (first.nodeType !== undefined) {
+                this._bindings = nodesOrBindings.map(function (x) { return ({
+                    node: x,
+                    queryType: QueryType.Node
+                }); });
+            }
+            else {
+                this._bindings = nodesOrBindings;
+            }
         }
         else {
-            this._bindings = [{
-                    node: nodeOrBindings,
-                    queryType: QueryType.Node
-                }];
+            this._bindings = [];
         }
         this.context = {};
         this.parentRenderer = parent;
     }
-    Renderer.Create = function (nodeOrBindings) {
-        return Renderer.Main.create(nodeOrBindings);
+    Renderer.Create = function (nodeOrBinding) {
+        return Renderer.Main.create(nodeOrBinding);
     };
-    Renderer.prototype.create = function (nodeOrBindings) {
-        return new Renderer(nodeOrBindings, this);
+    Renderer.CreateMulti = function (nodesOrBindings) {
+        return Renderer.Main.createMulti(nodesOrBindings);
     };
+    Object.defineProperty(Renderer.prototype, "nodes", {
+        get: function () {
+            return this._bindings.map(function (x) { return x.node; });
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Renderer.prototype, "bindings", {
         get: function () {
             return this._bindings;
@@ -72,7 +85,7 @@ var Renderer = /** @class */ (function () {
     };
     Object.defineProperty(Renderer.prototype, "node", {
         get: function () {
-            return this._bindings[0].node;
+            return this._bindings.length > 0 && this._bindings[0].node || null;
         },
         set: function (node) {
             var binding = this._bindings[0];
@@ -85,9 +98,15 @@ var Renderer = /** @class */ (function () {
         enumerable: true,
         configurable: true
     });
-    Object.defineProperty(Renderer.prototype, "nodes", {
+    Renderer.prototype.create = function (nodeOrBinding) {
+        return new Renderer([nodeOrBinding], this);
+    };
+    Renderer.prototype.createMulti = function (nodesOrBindings) {
+        return new Renderer(nodesOrBindings, this);
+    };
+    Object.defineProperty(Renderer.prototype, "binding", {
         get: function () {
-            return this._bindings.map(function (x) { return x.node; });
+            return this._bindings[0];
         },
         enumerable: true,
         configurable: true
@@ -126,7 +145,7 @@ var Renderer = /** @class */ (function () {
         var context = this.context[selector];
         if (!context) {
             context = this.context[selector] = {
-                result: this.create(this.querySelectorAllInternal(selector).map(function (x) { return ({
+                result: this.createMulti(this.querySelectorAllInternal(selector).map(function (x) { return ({
                     node: x,
                     queryType: QueryType.Node,
                     query: selector
@@ -135,25 +154,25 @@ var Renderer = /** @class */ (function () {
         }
         return context.result;
     };
-    Renderer.prototype.findEntries = function (entry) {
+    Renderer.prototype.getEntries = function (entry) {
         var _this = this;
         var context = this.context[entry];
         if (!context) {
             context = this.context[entry] = {};
             var bindings_1 = [];
-            this.nodes.forEach(function (x) { return _this.fillBindings(x, entry, bindings_1, false); });
-            context.renderer = this.create(bindings_1);
+            this._bindings.forEach(function (x) { return _this.fillBindings(x.node, entry, bindings_1, false); });
+            context.renderer = this.createMulti(bindings_1);
         }
         return context.renderer;
     };
-    Renderer.prototype.findEntry = function (entry) {
+    Renderer.prototype.getEntry = function (entry) {
         var _this = this;
         var context = this.context[entry];
         if (!context) {
             context = this.context[entry] = {};
             var bindings_2 = [];
-            this.nodes.forEach(function (x) { return _this.fillBindings(x, entry, bindings_2, true); });
-            context.renderer = this.create(bindings_2);
+            this._bindings.forEach(function (x) { return _this.fillBindings(x.node, entry, bindings_2, true); });
+            context.renderer = this.create(bindings_2[0]);
         }
         return context.renderer;
     };
@@ -163,8 +182,8 @@ var Renderer = /** @class */ (function () {
         if (!context) {
             context = this.context[entry] = {};
             var bindings_3 = [];
-            this.nodes.forEach(function (x) { return _this.findNodesInternal(x, entry, bindings_3, true); });
-            context.renderer = this.create(bindings_3);
+            this._bindings.forEach(function (x) { return _this.findNodesInternal(x.node, entry, bindings_3, true); });
+            context.renderer = this.create(bindings_3[0]);
         }
         return context.renderer;
     };
@@ -174,8 +193,8 @@ var Renderer = /** @class */ (function () {
         if (!context) {
             context = this.context[entry] = {};
             var bindings_4 = [];
-            this.nodes.forEach(function (x) { return _this.findNodesInternal(x, entry, bindings_4, false); });
-            context.renderer = this.create(bindings_4);
+            this._bindings.forEach(function (x) { return _this.findNodesInternal(x.node, entry, bindings_4, false); });
+            context.renderer = this.createMulti(bindings_4);
         }
         return context.renderer;
     };
@@ -199,7 +218,7 @@ var Renderer = /** @class */ (function () {
         }
     };
     Renderer.prototype.set = function (stub, value) {
-        this.findEntries(stub).mount(AltSet).set(value);
+        this.getEntry(stub).mount(AltSet).set(value);
     };
     Renderer.prototype.repeat = function (templateSelector, items, update) {
         this.query(templateSelector).mount(AltRepeat).repeat(items, update);
@@ -351,7 +370,7 @@ var Renderer = /** @class */ (function () {
         return hash;
     };
     ;
-    Renderer.Main = new Renderer(document.body, null);
+    Renderer.Main = new Renderer([document.body], null);
     return Renderer;
 }());
 var ATTRIBUTE_TO_IDL_MAP = {
