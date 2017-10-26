@@ -22,7 +22,7 @@ class DbMonTable extends HTMLElement {
     this.databases = [];
     // this.template = document.getElementById("component-template");
     this.appendChild(fromTemplate(this.template));
-    this.root = new Renderer(this);
+    this.root = new Renderer(this, null);
     this.update();
 
     this.toggle = true;
@@ -66,18 +66,21 @@ class DbMonTable extends HTMLElement {
     this.root.set("@inputText", this.inputValue);
     this.root.set("@onStartStopClick", this.onStartStop);
     this.root.set("@startStopButtonText", this.started ? "Стоп" : "Старт");
-    this.root.querySelector("input").on(this.toggle, (input) => {
+    this.root.query("input").on(this.toggle, (input) => {
       input.nodeAs<HTMLInputElement>().style.backgroundColor = this.toggle ? "white" : "yellow";
+    });
+    this.root.query("input").once((input) => {
+      input.nodeAs<HTMLInputElement>().style.color = "green";
     });
     this.root.showIf("#blink", this.toggle);
 
-    this.root.repeat("#row", this.databases, this.root.once && ((row, db) => {
+    this.root.repeat("#row", this.databases, ((row, db) => {
       row.set("@dbname", db.dbname);
       row.set("@countClass", db.lastSample.countClassName);
       row.set("@queryCount", db.lastSample.nbQueries);
       row.set("@dbclass", this.toggle ? "dbtestclass1" : null);
       row.set("@dbclass2", this.toggle ? "dbtestclass2" : "");
-      row.componentOnNode("@queries", DbMonQueryList).update(db.lastSample.topFiveQueries);
+      row.findNode("@queries").mount(DbMonQueryList).update(db.lastSample.topFiveQueries);
     }));
   }
 

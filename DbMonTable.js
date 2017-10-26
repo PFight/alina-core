@@ -31,7 +31,7 @@ var DbMonTable = /** @class */ (function (_super) {
         _this.databases = [];
         // this.template = document.getElementById("component-template");
         _this.appendChild(fromTemplate(_this.template));
-        _this.root = new Renderer(_this);
+        _this.root = new Renderer(_this, null);
         _this.update();
         _this.toggle = true;
         setInterval(function () {
@@ -47,17 +47,20 @@ var DbMonTable = /** @class */ (function (_super) {
         this.root.set("@inputText", this.inputValue);
         this.root.set("@onStartStopClick", this.onStartStop);
         this.root.set("@startStopButtonText", this.started ? "Стоп" : "Старт");
-        this.root.querySelector("input").on(this.toggle, function (input) {
+        this.root.query("input").on(this.toggle, function (input) {
             input.nodeAs().style.backgroundColor = _this.toggle ? "white" : "yellow";
         });
+        this.root.query("input").once(function (input) {
+            input.nodeAs().style.color = "green";
+        });
         this.root.showIf("#blink", this.toggle);
-        this.root.repeat("#row", this.databases, this.root.once && (function (row, db) {
+        this.root.repeat("#row", this.databases, (function (row, db) {
             row.set("@dbname", db.dbname);
             row.set("@countClass", db.lastSample.countClassName);
             row.set("@queryCount", db.lastSample.nbQueries);
             row.set("@dbclass", _this.toggle ? "dbtestclass1" : null);
             row.set("@dbclass2", _this.toggle ? "dbtestclass2" : "");
-            row.componentOnNode("@queries", DbMonQueryList).update(db.lastSample.topFiveQueries);
+            row.findNode("@queries").mount(DbMonQueryList).update(db.lastSample.topFiveQueries);
         }));
     };
     DbMonTable.prototype.connectedCallback = function () {

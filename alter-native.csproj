@@ -30,6 +30,7 @@
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="alter-native.ts" />
+    <TypeScriptCompile Include="AltShow.ts" />
     <TypeScriptCompile Include="AltSet.ts" />
     <TypeScriptCompile Include="AltRepeat.ts" />
     <TypeScriptCompile Include="DbMonTable.ts" />

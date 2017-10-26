@@ -6,12 +6,12 @@ var DbMonQueryList = /** @class */ (function () {
         this.root = root;
     };
     DbMonQueryList.prototype.update = function (quries) {
-        this.root.component("queries", AltRepeat).repeatEx(quries, this.root.once && {
+        this.root.mount(AltRepeat).repeatEx(quries, {
             template: this.template,
             container: this.root.elem.parentElement,
             insertBefore: this.root.elem,
             update: function (query, queryModel) {
-                query.componentOnNode("@queryComponent", DbMonQuery).update(queryModel);
+                query.findNode("@queryComponent").mount(DbMonQuery).update(queryModel);
             }
         });
     };

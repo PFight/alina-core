@@ -10,12 +10,12 @@
   `);
 
   update(quries: Query[]) {
-    this.root.component("queries", AltRepeat).repeatEx(quries, this.root.once && {
+    this.root.mount(AltRepeat).repeatEx(quries, {
       template: this.template,
       container: this.root.elem.parentElement,
       insertBefore: this.root.elem,
       update: (query, queryModel) => {
-        query.componentOnNode("@queryComponent", DbMonQuery).update(queryModel);
+        query.findNode("@queryComponent").mount(DbMonQuery).update(queryModel);
       }
     });
   }

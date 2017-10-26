@@ -27,13 +27,13 @@ var AltRepeat = /** @class */ (function () {
             var modelItem = items[i];
             // Createcontext
             var itemContext = this.itemContexts[i];
-            if (!itemContext || !compare(modelItem, itemContext.oldModelItem, props.equals)) {
+            if (!itemContext || !this.compare(modelItem, itemContext.oldModelItem, props.equals)) {
                 itemContext = this.itemContexts[i] = {};
             }
             // Create node
             if (!itemContext.renderer) {
                 var node = fromTemplate(props.template);
-                itemContext.renderer = new Renderer([{ node: node, queryType: QueryType.Node }]);
+                itemContext.renderer = this.renderer.create([{ node: node, queryType: QueryType.Node }]);
             }
             // Fill content
             props.update(itemContext.renderer, modelItem);
@@ -59,6 +59,11 @@ var AltRepeat = /** @class */ (function () {
             }
         }
         this.itemContexts.splice(firstIndexToRemove, this.itemContexts.length - firstIndexToRemove);
+    };
+    AltRepeat.prototype.compare = function (a, b, comparer) {
+        return (undefinedOrNull(a) && undefinedOrNull(b)) ||
+            (definedNotNull(a) && definedNotNull(b) && !comparer) ||
+            (definedNotNull(a) && definedNotNull(b) && comparer && comparer(a, b));
     };
     return AltRepeat;
 }());

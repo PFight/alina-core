@@ -1,5 +1,5 @@
 interface AltComponent {
-  initialize(context: Renderer);
+  initialize(context: Renderer): void;
 }
 
 interface ComponentConstructor<ComponentT> {
@@ -7,9 +7,9 @@ interface ComponentConstructor<ComponentT> {
 }
 
 enum QueryType {
-  Node,
-  NodeAttribute,
-  NodeTextContent
+  Node = 1,
+  NodeAttribute = 2,
+  NodeTextContent = 3
 }
 
 interface NodeBinding {
@@ -18,7 +18,6 @@ interface NodeBinding {
   query?: string;
   attributeName?: string;
   idlName?: string;
-  setter?: ValueSetter<any>;
 }
 
 function makeTemplate(str: string): HTMLTemplateElement {
@@ -52,21 +51,14 @@ function undefinedOrNull(x) {
   return x === undefined || x === null;
 }
 
-function compare(a, b, comparer) {
-  return (undefinedOrNull(a) && undefinedOrNull(b)) ||
-    (definedNotNull(a) && definedNotNull(b) && !comparer) ||
-    (definedNotNull(a) && definedNotNull(b) && comparer && comparer(a, b));
-}
-
 class Renderer {
   context: { [key: string]: any };
   bindings: NodeBinding[];
-  protected onceFlag: boolean;
   protected onLastValue;
+  protected onceFlag: boolean;
+  protected parentRenderer: Renderer;
 
-  constructor(node: Node);
-  constructor(bindings: NodeBinding[]);
-  constructor(nodeOrBindings: Node | NodeBinding[]) {
+  constructor(nodeOrBindings: Node | NodeBinding[], parent: Renderer) {
     if (Array.isArray(nodeOrBindings)) {
       this.bindings = nodeOrBindings;
     } else {
@@ -76,14 +68,11 @@ class Renderer {
       }];
     }
     this.context = {};
+    this.parentRenderer = parent;
   }
 
-  get once() {
-    if (!this.onceFlag) {
-      this.onceFlag = true;
-      return true;
-    }
-    return false;
+  create(nodeOrBindings: Node | NodeBinding[]) {
+    return new Renderer(nodeOrBindings, this);
   }
 
   get elem(): HTMLElement {
@@ -122,93 +111,41 @@ class Renderer {
     return context as T;
   }
 
-  componentOnNode<ComponentT extends AltComponent>(selectorOrText: string,
-    component: ComponentConstructor<ComponentT>): ComponentT
+  mount<ComponentT extends AltComponent>(
+    componentCtor: ComponentConstructor<ComponentT>,
+    key?: string): ComponentT
   {
-    let key = getComponentKey(selectorOrText, component);
-    let context = this.context[key];
-    if (!context) {
-      context = this.context[key] = {};
-      let result: Element;
-      try {
-        result = this.querySelectorInternal(selectorOrText);
-      } catch { }
-      if (!result) {
-        result = this.findNodeInternal(selectorOrText);
-      }      
-
-      let renderer = new Renderer([{
-        node: result,
-        queryType: QueryType.Node,
-        query: selectorOrText
-      }]);
-      context.componentInstance = new component();
-      (context.componentInstance as AltComponent).initialize(renderer);
-
-      // Component can replace current node
-      if (result == this.node && renderer.node != result) {
-        this.node = renderer.node;
-      }
-    }
-    return context.componentInstance;
-  }
-
-  webComponent<ComponentT extends HTMLElement>(selector: string,
-    component: ComponentConstructor<ComponentT>): ComponentT {
-    let key = getComponentKey(selector, component);
-    let context = this.context[key];
-    if (!context) {
-      context = this.context[key] = {};
-      let result = this.querySelectorInternal(selector);
-      if (customElements.get(result.nodeName.toLowerCase()) == component) {
-        context.componentInstance = result;
-      } else {
-        throw new Error("Component do not match element");
-      }
-    }
-    return context.componentInstance;
-  }
-
-  component<ComponentT extends AltComponent>(key: string,
-    componentCtor: ComponentConstructor<ComponentT>): ComponentT {
-    let componentKey = getComponentKey(key, componentCtor);
+    let componentKey = this.getComponentKey(key, componentCtor);
     let context = this.getContext<any>(componentKey);
     if (!context.instance) {
+      let sameAsParent = this.parentRenderer && this.parentRenderer.node == this.node;
+
       context.instance = new componentCtor();
       (context.instance as AltComponent).initialize(this);
+
+      // Component can replace current node
+      if (sameAsParent && this.parentRenderer.node != this.node) {
+        this.parentRenderer.node = this.node;
+      }
     }
     return context.instance;
   }
 
-  findTextNode(text: string): Renderer {
-    let context = this.context[text];
+  query(selector: string): Renderer {
+    let context = this.context[selector];
     if (!context) {
-      context = this.context[text] = {};
-      for (let i = 0; i < this.bindings.length && !context.result; i++) {
-        let elem = findTextNode(text, this.bindings[i].node) as Element;
-        if (elem) {
-          context.result = new Renderer(elem);
-        }
+      context = this.context[selector] = {
+        result: this.create(this.querySelectorInternal(selector))
       }
     }
     return context.result;
   }
 
-  querySelector(selector: string): Renderer {
+  queryAll(selector: string): Renderer {
     let context = this.context[selector];
     if (!context) {
       context = this.context[selector] = {
-        result: new Renderer(this.querySelectorInternal(selector));
-      }
-    }
-    return context.result;
-  }
-
-  querySelectorAll(selector: string): Renderer {
-    let context = this.context[selector];
-    if (!context) {
-      context = this.context[selector] = {
-        result: new Renderer(
+        result: this.create(
           this.querySelectorAllInternal(selector).map(x => ({
             node: x,
             queryType: QueryType.Node,
@@ -220,13 +157,46 @@ class Renderer {
     return context.result;
   }
 
-  findAll(stub: string): Renderer {
-    let context = this.context[stub];
+  findEntries(entry: string): Renderer {
+    let context = this.context[entry];
     if (!context) {
-      context = this.context[stub] = {};
+      context = this.context[entry] = {};
       let bindings: NodeBinding[] = [];
-      this.nodes.forEach(x => fillBindings(x, stub, bindings));
-      context.renderer = new Renderer(bindings);      
+      this.nodes.forEach(x => this.fillBindings(x, entry, bindings, false));
+      context.renderer = this.create(bindings);      
+    }
+    return context.renderer;
+  }
+
+  findEntry(entry: string): Renderer {
+    let context = this.context[entry];
+    if (!context) {
+      context = this.context[entry] = {};
+      let bindings: NodeBinding[] = [];
+      this.nodes.forEach(x => this.fillBindings(x, entry, bindings, true));
+      context.renderer = this.create(bindings);
+    }
+    return context.renderer;
+  }
+
+  findNode(entry: string): Renderer {
+    let context = this.context[entry];
+    if (!context) {
+      context = this.context[entry] = {};
+      let bindings: NodeBinding[] = [];
+      this.nodes.forEach(x => this.findNodesInternal(x, entry, bindings, true));
+      context.renderer = this.create(bindings);
+    }
+    return context.renderer;
+  }
+
+  findNodes(entry: string): Renderer {
+    let context = this.context[entry];
+    if (!context) {
+      context = this.context[entry] = {};
+      let bindings: NodeBinding[] = [];
+      this.nodes.forEach(x => this.findNodesInternal(x, entry, bindings, false));
+      context.renderer = this.create(bindings);
     }
     return context.renderer;
   }
@@ -244,39 +214,23 @@ class Renderer {
     }
   }
 
-  componentOn<ComponentT extends AltComponent>(stub: string,
-    component: ComponentConstructor<ComponentT>): ComponentT {
-    let key = getComponentKey(stub, component);
-    let context = this.context[key];
-    if (!context) {
-      context = this.context[key] = {};
-      let bindings: NodeBinding[] = [];
-      this.nodes.forEach(x => fillBindings(x, stub, bindings));
-      let renderer = new Renderer(bindings);
-      context.componentInstance = new component();
-      (context.componentInstance as AltComponent).initialize(renderer);
+  once(callback: (renderer: Renderer) => void) {
+    if (!this.onceFlag) {
+      this.onceFlag = true;
+      callback(this);
     }
-    return context.componentInstance;
   }
 
   set<T>(stub: string, value: T) {
-    this.componentOn(stub, AltSet).set(value);
+    this.findEntries(stub).mount(AltSet).set(value);
   }
 
   repeat<T>(templateSelector: string, items: T[], update: (renderer: Renderer, model: T) => void) {
-    this.componentOnNode(templateSelector, AltRepeat).repeat(items, update);
+    this.query(templateSelector).mount(AltRepeat).repeat(items, update);
   }
 
   showIf(templateSelector: string, value: boolean) {
-    this.componentOnNode(templateSelector, AltShow).showIf(value);
-  }
-
-  protected findNodeInternal(text: string) {
-    let result;
-    for (let i = 0; i < this.bindings.length && !result; i++) {
-      result = findTextNode(text, this.bindings[i].node) as Element;
-    }
-    return result;
+    this.query(templateSelector).mount(AltShow).showIf(value);
   }
 
   protected querySelectorInternal(selector: string) {
@@ -309,105 +263,126 @@ class Renderer {
     }
     return result;
   }
-}
 
-function findTextNode(searchText: string, current: Node): Node | undefined {
-  if (current.nodeType == Node.TEXT_NODE || current.nodeType == Node.COMMENT_NODE) {
-    if (current.textContent && current.textContent.indexOf(searchText) >= 0) {
-      return current;
-    }
-  }
-  for (let i = 0; i < current.childNodes.length; i++) {
-    let result = findTextNode(searchText, current.childNodes[i]);
-    if (result) {
-      return result;
-    }
-  }
-}
-
-type ValueSetter<T> = (oldVal: T, newVal: T) => T;
-
-
-
-function fillBindings(node: Node, query: string, bindings: NodeBinding[], queryType?: QueryType) {
-  if (!queryType || queryType == QueryType.NodeTextContent) {
-    if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
-      let parts = node.textContent.split(query);
-      if (parts.length > 1) {
-        // Split content, to make stub separate node 
-        // and save this node to context.stubNodes
-        let nodeParent = node.parentNode;
-        for (let i = 0; i < parts.length - 1; i++) {
-          let part = parts[i];
-          if (part.length > 0) {
-            nodeParent.insertBefore(document.createTextNode(part), node);
+  protected fillBindings(node: Node, query: string, bindings: NodeBinding[], single: boolean, queryType?: QueryType) {
+    if (queryType === undefined || queryType == QueryType.NodeTextContent) {
+      if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
+        let parts = node.textContent.split(query);
+        if (parts.length > 1) {
+          // Split content, to make stub separate node 
+          // and save this node to context.stubNodes
+          let nodeParent = node.parentNode;
+          for (let i = 0; i < parts.length - 1; i++) {
+            let part = parts[i];
+            if (part.length > 0) {
+              nodeParent.insertBefore(document.createTextNode(part), node);
+            }
+            let stubNode = document.createTextNode(query);
+            if (!single || bindings.length == 0) {
+              bindings.push({
+                node: stubNode,
+                queryType: QueryType.NodeTextContent,
+                query: query
+              });
+            }
+            nodeParent.insertBefore(stubNode, node);
           }
-          let stubNode = document.createTextNode(query);
+          let lastPart = parts[parts.length - 1];
+          if (lastPart && lastPart.length > 0) {
+            nodeParent.insertBefore(document.createTextNode(lastPart), node);
+          }
+          nodeParent.removeChild(node);
+        }
+      }
+    }
+    if ((queryType === undefined || queryType == QueryType.NodeAttribute) && node.attributes) {
+      for (let i = 0; i < node.attributes.length && (!single || bindings.length == 0); i++) {
+        let attr = node.attributes[i];
+        if (attr.value && attr.value.indexOf(query) >= 0) {
           bindings.push({
-            node: stubNode,
-            queryType: QueryType.NodeTextContent,
-            query: query
+            node: node,
+            query: query,
+            attributeName: attr.name,
+            idlName: this.getIdlName(attr, node),
+            queryType: QueryType.NodeAttribute
           });
-          nodeParent.insertBefore(stubNode, node);
         }
-        let lastPart = parts[parts.length - 1];
-        if (lastPart && lastPart.length > 0) {
-          nodeParent.insertBefore(document.createTextNode(lastPart), node);
-        }
-        nodeParent.removeChild(node);
+      }
+    }
+
+    for (let i = 0; i < node.childNodes.length && (!single || bindings.length == 0); i++) {
+      let lengthBefore = node.childNodes.length;
+      this.fillBindings(node.childNodes[i], query, bindings, single, queryType);
+      let lengthAfter = node.childNodes.length;
+      // Node can be replaced by several other nodes
+      if (lengthAfter > lengthBefore) {
+        i += lengthAfter - lengthBefore;
       }
     }
   }
-  if ((!queryType || queryType == QueryType.NodeAttribute) && node.attributes) {
-    for (let i = 0; i < node.attributes.length; i++) {
-      let attr = node.attributes[i];
-      if (attr.value && attr.value.indexOf(query) >= 0) {
-        let idlName = ATTRIBUTE_TO_IDL_MAP[attr.name] || attr.name;
-        if (!(idlName in node)) {
-          idlName = null;
-        }
-        bindings.push({
-          node: node,
-          query: query,
-          attributeName: attr.name,
-          idlName: idlName,
-          queryType: QueryType.NodeAttribute
+
+  protected findNodesInternal(node: Node, query: string, bindings: NodeBinding[], single: boolean) {
+    let found = false;
+    if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
+      if (node.textContent.indexOf(query) >= 0) {
+          bindings.push({
+            node: node,
+            query: query,
+            queryType: QueryType.Node
         });
+        found = true;
+      } 
+    }
+    
+    if (!found && node.attributes) {
+      for (let i = 0; i < node.attributes.length && !found; i++) {
+        let attr = node.attributes[i];
+        if (attr.name.indexOf(query) >= 0 || attr.value.indexOf(query) >= 0) {
+          bindings.push({
+            node: node,
+            query: query,
+            attributeName: attr.name,
+            idlName: this.getIdlName(attr, node),
+            queryType: QueryType.Node
+          });
+        }
       }
+    }
+
+    for (let i = 0; i < node.childNodes.length && (!single || bindings.length == 0); i++) {
+      this.findNodesInternal(node.childNodes[i], query, bindings, single);
     }
   }
 
-  for (let i = 0; i < node.childNodes.length; i++) {
-    let lengthBefore = node.childNodes.length;
-    fillBindings(node.childNodes[i], query, bindings);
-    let lengthAfter = node.childNodes.length;
-    // Node can be replaced by several other nodes
-    if (lengthAfter > lengthBefore) {
-      i += lengthAfter - lengthBefore;
-    } 
+  protected getIdlName(attr: Attr, node: Node) {
+    let idlName = ATTRIBUTE_TO_IDL_MAP[attr.name] || attr.name;
+    if (!(idlName in node)) {
+      idlName = null;
+    }
+    return idlName;
   }
-}
 
-function getComponentKey(key: string, component: ComponentConstructor<any>) {
-  let result = key || "";
-  if (component.name) {
-    result += component.name;
-  } else {
-    result += hashCode(component.toString());
+  protected getComponentKey(key: string, component: ComponentConstructor<any>) {
+    let result = key || "";
+    if (component.name) {
+      result += component.name;
+    } else {
+      result += this.hashCode(component.toString());
+    }
+    return result;
   }
-  return result;
-}
 
-function hashCode(str: string) {
-  var hash = 0, i, chr;
-  if (str.length === 0) return hash;
-  for (i = 0; i < str.length; i++) {
-    chr = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + chr;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return hash;
-};
+  protected hashCode(str: string) {
+    var hash = 0, i, chr;
+    if (str.length === 0) return hash;
+    for (i = 0; i < str.length; i++) {
+      chr = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0; // Convert to 32bit integer
+    }
+    return hash;
+  };
+}
 
 var ATTRIBUTE_TO_IDL_MAP: { [attributeName: string]: string } = {
   "class": "className",
