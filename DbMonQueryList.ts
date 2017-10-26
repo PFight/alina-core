@@ -1,4 +1,4 @@
-﻿class DbMonQueryList implements AltComponent {
+﻿class DbMonQueryList extends AltComponent {
   root: Renderer;
 
   initialize(root: Renderer) {

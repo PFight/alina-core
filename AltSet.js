@@ -1,7 +1,7 @@
 var AltSet = /** @class */ (function () {
     function AltSet() {
     }
-    AltSet.prototype.initialize = function (context) {
+    AltSet.prototype.initializeMulti = function (context) {
         this.root = context;
     };
     AltSet.prototype.set = function (value) {

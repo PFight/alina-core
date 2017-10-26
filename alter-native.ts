@@ -2,9 +2,18 @@ interface AltComponent {
   initialize(context: Renderer): void;
 }
 
-interface ComponentConstructor<ComponentT> {
+interface AltMultiComponent {
+  initializeMulti(context: MultiRenderer): void;
+}
+
+interface MultiComponentConstructor<ComponentT extends AltMultiComponent> {
   new(): ComponentT;
 }
+
+interface ComponentConstructor<ComponentT extends AltComponent> {
+  new(): ComponentT;
+}
+
 
 enum QueryType {
   Node = 1,
@@ -51,20 +60,24 @@ function undefinedOrNull(x) {
   return x === undefined || x === null;
 }
 
-class Renderer {
+class MultiRenderer {
   protected context: { [key: string]: any };
   protected onLastValue;
   protected onceFlag: boolean;
-  protected parentRenderer: Renderer;
+  protected parentRenderer: MultiRenderer;
   protected _bindings: NodeBinding[];
 
-  static Main = new Renderer(document.body, null);
+  static Main = new MultiRenderer(document.body, null);
 
   static Create(nodeOrBindings: Node | NodeBinding[]) {
     return Renderer.Main.create(nodeOrBindings);
   }
 
-  protected constructor(nodeOrBindings: Node | NodeBinding[], parent: Renderer) {
+  static CreateMulti(nodeOrBindings: Node | NodeBinding[]) {
+    return Renderer.Main.createMulti(nodeOrBindings);
+  }
+
+  protected constructor(nodeOrBindings: Node | NodeBinding[], parent: MultiRenderer) {
     if (Array.isArray(nodeOrBindings)) {
       this._bindings = nodeOrBindings;
     } else {
@@ -77,40 +90,24 @@ class Renderer {
     this.parentRenderer = parent;
   }
 
-  public create(nodeOrBindings: Node | NodeBinding[]) {
-    return new Renderer(nodeOrBindings, this);
+  public get nodes(): Node[] {
+    return this._bindings.map(x => x.node);
   }
 
   public get bindings() {
     return this._bindings;
   }
 
-  public get elem(): HTMLElement {
-    return this.node as HTMLElement;
-  }
-  public set elem(elem: HTMLElement) {
-    this.node = elem;
+  public create(nodeOrBindings: Node | NodeBinding[]) {
+    return new Renderer(nodeOrBindings, this);
   }
 
-  public nodeAs<T extends Node>() {
-    return this.node as T;
+  public createMulti(nodeOrBindings: Node | NodeBinding[]) {
+    return new MultiRenderer(nodeOrBindings, this);
   }
 
-  public get node(): Node {
-    return this._bindings[0].node;
-  }
-
-  public get nodes(): Node[] {
-    return this._bindings.map(x => x.node);
-  }
-
-  public set node(node: Node) {
-    let binding = this._bindings[0];
-    if (!binding) {
-      binding = this._bindings[0] = {} as NodeBinding;
-    }
-    binding.node = node;
-    binding.queryType = QueryType.Node;
+  public get binding() {
+    return this._bindings[0];
   }
 
   public getContext<T>(key: string, createContext?: () => T): T {
@@ -121,8 +118,8 @@ class Renderer {
     return context as T;
   }
 
-  public mount<ComponentT extends AltComponent>(
-    componentCtor: ComponentConstructor<ComponentT>,
+  public mount<ComponentT extends AltMultiComponent>(
+    componentCtor: MultiComponentConstructor<ComponentT>,
     key?: string): ComponentT
   {
     let componentKey = this.getComponentKey(key, componentCtor);
@@ -131,7 +128,7 @@ class Renderer {
       let sameAsParent = this.parentRenderer && this.parentRenderer.node == this.node;
 
       context.instance = new componentCtor();
-      (context.instance as AltComponent).initialize(this);
+      (context.instance as AltMultiComponent).initializeMulti(this);
 
       // Component can replace current node
       if (sameAsParent && this.parentRenderer.node != this.node) {
@@ -151,11 +148,11 @@ class Renderer {
     return context.result;
   }
 
-  public queryAll(selector: string): Renderer {
+  public queryAll(selector: string): MultiRenderer {
     let context = this.context[selector];
     if (!context) {
       context = this.context[selector] = {
-        result: this.create(
+        result: this.createMulti(
           this.querySelectorAllInternal(selector).map(x => ({
             node: x,
             queryType: QueryType.Node,
@@ -167,23 +164,23 @@ class Renderer {
     return context.result;
   }
 
-  public findEntries(entry: string): Renderer {
+  public getEntries(entry: string): MultiRenderer {
     let context = this.context[entry];
     if (!context) {
       context = this.context[entry] = {};
       let bindings: NodeBinding[] = [];
-      this.nodes.forEach(x => this.fillBindings(x, entry, bindings, false));
-      context.renderer = this.create(bindings);      
+      this._bindings.forEach(x => this.fillBindings(x.node, entry, bindings, false));
+      context.renderer = this.createMulti(bindings);      
     }
     return context.renderer;
   }
 
-  public findEntry(entry: string): Renderer {
+  public getEntry(entry: string): Renderer {
     let context = this.context[entry];
     if (!context) {
       context = this.context[entry] = {};
       let bindings: NodeBinding[] = [];
-      this.nodes.forEach(x => this.fillBindings(x, entry, bindings, true));
+      this._bindings.forEach(x => this.fillBindings(x.node, entry, bindings, true));
       context.renderer = this.create(bindings);
     }
     return context.renderer;
@@ -194,24 +191,24 @@ class Renderer {
     if (!context) {
       context = this.context[entry] = {};
       let bindings: NodeBinding[] = [];
-      this.nodes.forEach(x => this.findNodesInternal(x, entry, bindings, true));
+      this._bindings.forEach(x => this.findNodesInternal(x.node, entry, bindings, true));
       context.renderer = this.create(bindings);
     }
     return context.renderer;
   }
 
-  public findNodes(entry: string): Renderer {
+  public findNodes(entry: string): MultiRenderer {
     let context = this.context[entry];
     if (!context) {
       context = this.context[entry] = {};
       let bindings: NodeBinding[] = [];
-      this.nodes.forEach(x => this.findNodesInternal(x, entry, bindings, false));
-      context.renderer = this.create(bindings);
+      this._bindings.forEach(x => this.findNodesInternal(x.node, entry, bindings, false));
+      context.renderer = this.createMulti(bindings);
     }
     return context.renderer;
   }
 
-  public on<T>(value: T, callback: (renderer: Renderer, value?: T, prevValue?: T) => T | void, key?: string) {
+  public on<T>(value: T, callback: (renderer: MultiRenderer, value?: T, prevValue?: T) => T | void, key?: string): void {
     let lastValue = key ? this.context[key] : this.onLastValue;
     if (this.onLastValue !== value) {
       let result = callback(this, value, this.onLastValue);
@@ -224,22 +221,22 @@ class Renderer {
     }
   }
 
-  public once(callback: (renderer: Renderer) => void) {
+  public once(callback: (renderer: MultiRenderer) => void): void {
     if (!this.onceFlag) {
       this.onceFlag = true;
       callback(this);
     }
   }
 
-  public set<T>(stub: string, value: T) {
-    this.findEntries(stub).mount(AltSet).set(value);
+  public set<T>(stub: string, value: T): void {
+    this.getEntries(stub).mount(AltSet).set(value);
   }
 
-  public repeat<T>(templateSelector: string, items: T[], update: (renderer: Renderer, model: T) => void) {
+  public repeat<T>(templateSelector: string, items: T[], update: (renderer: Renderer, model: T) => void): void {
     this.query(templateSelector).mount(AltRepeat).repeat(items, update);
   }
 
-  public showIf(templateSelector: string, value: boolean) {
+  public showIf(templateSelector: string, value: boolean): void {
     this.query(templateSelector).mount(AltShow).showIf(value);
   }
 
@@ -372,7 +369,7 @@ class Renderer {
     return idlName;
   }
 
-  protected getComponentKey(key: string, component: ComponentConstructor<any>) {
+  protected getComponentKey(key: string, component: MultiComponentConstructor<any>) {
     let result = key || "";
     if (component.name) {
       result += component.name;
@@ -392,6 +389,51 @@ class Renderer {
     }
     return hash;
   };
+}
+
+class Renderer extends MultiRenderer {
+  public get elem(): HTMLElement {
+    return this.node as HTMLElement;
+  }
+  public set elem(elem: HTMLElement) {
+    this.node = elem;
+  }
+
+  public nodeAs<T extends Node>() {
+    return this.node as T;
+  }
+
+  public get node(): Node {
+    return this._bindings[0].node;
+  }
+
+  public set node(node: Node) {
+    let binding = this._bindings[0];
+    if (!binding) {
+      binding = this._bindings[0] = {} as NodeBinding;
+    }
+    binding.node = node;
+    binding.queryType = QueryType.Node;
+  }
+
+  public mount<ComponentT extends AltMultiComponent>(
+    componentCtor: MultiComponentConstructor<ComponentT>,
+    key?: string): ComponentT;
+  public mount<ComponentT extends AltComponent>(
+    componentCtor: ComponentConstructor<ComponentT>,
+    key?: string): ComponentT {
+    return super.mount(componentCtor as any, key) as any;
+  }
+
+  on<T>(value: T, callback: (renderer: MultiRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
+  on<T>(value: T, callback: (renderer: Renderer, value?: T, prevValue?: T) => T | void, key?: string): void {
+    return super.on(value, callback, key);
+  }
+
+  once(callback: (renderer: MultiRenderer) => void): void;
+  once(callback: (renderer: Renderer) => void): void {
+    return super.once(callback);
+  }
 }
 
 var ATTRIBUTE_TO_IDL_MAP: { [attributeName: string]: string } = {
