@@ -267,6 +267,10 @@ class Renderer {
     this.componentOnNode(templateSelector, AltRepeat).repeat(items, update);
   }
 
+  showIf(templateSelector: string, value: boolean) {
+    this.componentOnNode(templateSelector, AltShow).showIf(value);
+  }
+
   protected findNodeInternal(text: string) {
     let result;
     for (let i = 0; i < this.bindings.length && !result; i++) {

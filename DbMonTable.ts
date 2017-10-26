@@ -38,6 +38,9 @@ class DbMonTable extends HTMLElement {
           <input disabled="@toggled" oninput=@inputChange /> 
           You entered: @inputText
           <button onclick=@onStartStopClick >@startStopButtonText</button>
+          <template id="blink">
+            <span>Blink</span>
+          </template>
         </div>
         <table class="table table-striped latest-data">
           <tbody>
@@ -66,6 +69,7 @@ class DbMonTable extends HTMLElement {
     this.root.querySelector("input").on(this.toggle, (input) => {
       input.nodeAs<HTMLInputElement>().style.backgroundColor = this.toggle ? "white" : "yellow";
     });
+    this.root.showIf("#blink", this.toggle);
 
     this.root.repeat("#row", this.databases, this.root.once && ((row, db) => {
       row.set("@dbname", db.dbname);

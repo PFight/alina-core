@@ -229,6 +229,9 @@ var Renderer = /** @class */ (function () {
     Renderer.prototype.repeat = function (templateSelector, items, update) {
         this.componentOnNode(templateSelector, AltRepeat).repeat(items, update);
     };
+    Renderer.prototype.showIf = function (templateSelector, value) {
+        this.componentOnNode(templateSelector, AltShow).showIf(value);
+    };
     Renderer.prototype.findNodeInternal = function (text) {
         var result;
         for (var i = 0; i < this.bindings.length && !result; i++) {
