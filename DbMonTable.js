@@ -31,7 +31,7 @@ var DbMonTable = /** @class */ (function (_super) {
         _this.databases = [];
         // this.template = document.getElementById("component-template");
         _this.appendChild(fromTemplate(_this.template));
-        _this.root = new Renderer(_this, null);
+        _this.root = Renderer.Create(_this);
         _this.update();
         _this.toggle = true;
         setInterval(function () {

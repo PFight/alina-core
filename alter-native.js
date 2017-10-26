@@ -33,10 +33,10 @@ function undefinedOrNull(x) {
 var Renderer = /** @class */ (function () {
     function Renderer(nodeOrBindings, parent) {
         if (Array.isArray(nodeOrBindings)) {
-            this.bindings = nodeOrBindings;
+            this._bindings = nodeOrBindings;
         }
         else {
-            this.bindings = [{
+            this._bindings = [{
                     node: nodeOrBindings,
                     queryType: QueryType.Node
                 }];
@@ -44,9 +44,19 @@ var Renderer = /** @class */ (function () {
         this.context = {};
         this.parentRenderer = parent;
     }
+    Renderer.Create = function (nodeOrBindings) {
+        return Renderer.Main.create(nodeOrBindings);
+    };
     Renderer.prototype.create = function (nodeOrBindings) {
         return new Renderer(nodeOrBindings, this);
     };
+    Object.defineProperty(Renderer.prototype, "bindings", {
+        get: function () {
+            return this._bindings;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Renderer.prototype, "elem", {
         get: function () {
             return this.node;
@@ -62,12 +72,12 @@ var Renderer = /** @class */ (function () {
     };
     Object.defineProperty(Renderer.prototype, "node", {
         get: function () {
-            return this.bindings[0].node;
+            return this._bindings[0].node;
         },
         set: function (node) {
-            var binding = this.bindings[0];
+            var binding = this._bindings[0];
             if (!binding) {
-                binding = this.bindings[0] = {};
+                binding = this._bindings[0] = {};
             }
             binding.node = node;
             binding.queryType = QueryType.Node;
@@ -77,7 +87,7 @@ var Renderer = /** @class */ (function () {
     });
     Object.defineProperty(Renderer.prototype, "nodes", {
         get: function () {
-            return this.bindings.map(function (x) { return x.node; });
+            return this._bindings.map(function (x) { return x.node; });
         },
         enumerable: true,
         configurable: true
@@ -199,8 +209,8 @@ var Renderer = /** @class */ (function () {
     };
     Renderer.prototype.querySelectorInternal = function (selector) {
         var result;
-        for (var i = 0; i < this.bindings.length && !result; i++) {
-            var node = this.bindings[i].node;
+        for (var i = 0; i < this._bindings.length && !result; i++) {
+            var node = this._bindings[i].node;
             if (node.nodeType == Node.ELEMENT_NODE) {
                 var elem = node;
                 if (elem.matches(selector)) {
@@ -215,8 +225,8 @@ var Renderer = /** @class */ (function () {
     };
     Renderer.prototype.querySelectorAllInternal = function (selector) {
         var result = [];
-        for (var i = 0; i < this.bindings.length && !result; i++) {
-            var node = this.bindings[i].node;
+        for (var i = 0; i < this._bindings.length && !result; i++) {
+            var node = this._bindings[i].node;
             if (node.nodeType == Node.ELEMENT_NODE) {
                 var elem = node;
                 if (elem.matches(selector)) {
@@ -341,6 +351,7 @@ var Renderer = /** @class */ (function () {
         return hash;
     };
     ;
+    Renderer.Main = new Renderer(document.body, null);
     return Renderer;
 }());
 var ATTRIBUTE_TO_IDL_MAP = {

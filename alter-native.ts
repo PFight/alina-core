@@ -52,17 +52,23 @@ function undefinedOrNull(x) {
 }
 
 class Renderer {
-  context: { [key: string]: any };
-  bindings: NodeBinding[];
+  protected context: { [key: string]: any };
   protected onLastValue;
   protected onceFlag: boolean;
   protected parentRenderer: Renderer;
+  protected _bindings: NodeBinding[];
 
-  constructor(nodeOrBindings: Node | NodeBinding[], parent: Renderer) {
+  static Main = new Renderer(document.body, null);
+
+  static Create(nodeOrBindings: Node | NodeBinding[]) {
+    return Renderer.Main.create(nodeOrBindings);
+  }
+
+  protected constructor(nodeOrBindings: Node | NodeBinding[], parent: Renderer) {
     if (Array.isArray(nodeOrBindings)) {
-      this.bindings = nodeOrBindings;
+      this._bindings = nodeOrBindings;
     } else {
-      this.bindings = [{
+      this._bindings = [{
         node: nodeOrBindings,
         queryType: QueryType.Node
       }];
@@ -71,39 +77,43 @@ class Renderer {
     this.parentRenderer = parent;
   }
 
-  create(nodeOrBindings: Node | NodeBinding[]) {
+  public create(nodeOrBindings: Node | NodeBinding[]) {
     return new Renderer(nodeOrBindings, this);
   }
 
-  get elem(): HTMLElement {
+  public get bindings() {
+    return this._bindings;
+  }
+
+  public get elem(): HTMLElement {
     return this.node as HTMLElement;
   }
-  set elem(elem: HTMLElement) {
+  public set elem(elem: HTMLElement) {
     this.node = elem;
   }
 
-  nodeAs<T extends Node>() {
+  public nodeAs<T extends Node>() {
     return this.node as T;
   }
 
-  get node(): Node {
-    return this.bindings[0].node;
+  public get node(): Node {
+    return this._bindings[0].node;
   }
 
-  get nodes(): Node[] {
-    return this.bindings.map(x => x.node);
+  public get nodes(): Node[] {
+    return this._bindings.map(x => x.node);
   }
 
-  set node(node: Node) {
-    let binding = this.bindings[0];
+  public set node(node: Node) {
+    let binding = this._bindings[0];
     if (!binding) {
-      binding = this.bindings[0] = {} as NodeBinding;
+      binding = this._bindings[0] = {} as NodeBinding;
     }
     binding.node = node;
     binding.queryType = QueryType.Node;
   }
 
-  getContext<T>(key: string, createContext?: () => T): T {
+  public getContext<T>(key: string, createContext?: () => T): T {
     let context = this.context[key];
     if (!context) {
       context = this.context[key] = createContext ? createContext() : {};
@@ -111,7 +121,7 @@ class Renderer {
     return context as T;
   }
 
-  mount<ComponentT extends AltComponent>(
+  public mount<ComponentT extends AltComponent>(
     componentCtor: ComponentConstructor<ComponentT>,
     key?: string): ComponentT
   {
@@ -131,7 +141,7 @@ class Renderer {
     return context.instance;
   }
 
-  query(selector: string): Renderer {
+  public query(selector: string): Renderer {
     let context = this.context[selector];
     if (!context) {
       context = this.context[selector] = {
@@ -141,7 +151,7 @@ class Renderer {
     return context.result;
   }
 
-  queryAll(selector: string): Renderer {
+  public queryAll(selector: string): Renderer {
     let context = this.context[selector];
     if (!context) {
       context = this.context[selector] = {
@@ -157,7 +167,7 @@ class Renderer {
     return context.result;
   }
 
-  findEntries(entry: string): Renderer {
+  public findEntries(entry: string): Renderer {
     let context = this.context[entry];
     if (!context) {
       context = this.context[entry] = {};
@@ -168,7 +178,7 @@ class Renderer {
     return context.renderer;
   }
 
-  findEntry(entry: string): Renderer {
+  public findEntry(entry: string): Renderer {
     let context = this.context[entry];
     if (!context) {
       context = this.context[entry] = {};
@@ -179,7 +189,7 @@ class Renderer {
     return context.renderer;
   }
 
-  findNode(entry: string): Renderer {
+  public findNode(entry: string): Renderer {
     let context = this.context[entry];
     if (!context) {
       context = this.context[entry] = {};
@@ -190,7 +200,7 @@ class Renderer {
     return context.renderer;
   }
 
-  findNodes(entry: string): Renderer {
+  public findNodes(entry: string): Renderer {
     let context = this.context[entry];
     if (!context) {
       context = this.context[entry] = {};
@@ -201,7 +211,7 @@ class Renderer {
     return context.renderer;
   }
 
-  on<T>(value: T, callback: (renderer: Renderer, value?: T, prevValue?: T) => T | void, key?: string) {
+  public on<T>(value: T, callback: (renderer: Renderer, value?: T, prevValue?: T) => T | void, key?: string) {
     let lastValue = key ? this.context[key] : this.onLastValue;
     if (this.onLastValue !== value) {
       let result = callback(this, value, this.onLastValue);
@@ -214,29 +224,29 @@ class Renderer {
     }
   }
 
-  once(callback: (renderer: Renderer) => void) {
+  public once(callback: (renderer: Renderer) => void) {
     if (!this.onceFlag) {
       this.onceFlag = true;
       callback(this);
     }
   }
 
-  set<T>(stub: string, value: T) {
+  public set<T>(stub: string, value: T) {
     this.findEntries(stub).mount(AltSet).set(value);
   }
 
-  repeat<T>(templateSelector: string, items: T[], update: (renderer: Renderer, model: T) => void) {
+  public repeat<T>(templateSelector: string, items: T[], update: (renderer: Renderer, model: T) => void) {
     this.query(templateSelector).mount(AltRepeat).repeat(items, update);
   }
 
-  showIf(templateSelector: string, value: boolean) {
+  public showIf(templateSelector: string, value: boolean) {
     this.query(templateSelector).mount(AltShow).showIf(value);
   }
 
   protected querySelectorInternal(selector: string) {
     let result: Element;
-    for (let i = 0; i < this.bindings.length && !result; i++) {
-      let node = this.bindings[i].node;
+    for (let i = 0; i < this._bindings.length && !result; i++) {
+      let node = this._bindings[i].node;
       if (node.nodeType == Node.ELEMENT_NODE) {
         let elem = node as HTMLElement;
         if (elem.matches(selector)) {
@@ -251,8 +261,8 @@ class Renderer {
 
   protected querySelectorAllInternal(selector: string) {
     let result: Element[] = [];
-    for (let i = 0; i < this.bindings.length && !result; i++) {
-      let node = this.bindings[i].node;
+    for (let i = 0; i < this._bindings.length && !result; i++) {
+      let node = this._bindings[i].node;
       if (node.nodeType == Node.ELEMENT_NODE) {
         let elem = node as HTMLElement;
         if (elem.matches(selector)) {

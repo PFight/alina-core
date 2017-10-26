@@ -22,7 +22,7 @@ class DbMonTable extends HTMLElement {
     this.databases = [];
     // this.template = document.getElementById("component-template");
     this.appendChild(fromTemplate(this.template));
-    this.root = new Renderer(this, null);
+    this.root = Renderer.Create(this);
     this.update();
 
     this.toggle = true;
