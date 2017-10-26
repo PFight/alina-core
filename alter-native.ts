@@ -3,17 +3,12 @@ interface AltComponent {
 }
 
 interface AltMultiComponent {
-  initializeMulti(context: MultiRenderer): void;
+  initializeMulti(context: Renderer): void;
 }
 
-interface MultiComponentConstructor<ComponentT extends AltMultiComponent> {
+interface ComponentConstructor<ComponentT> {
   new(): ComponentT;
 }
-
-interface ComponentConstructor<ComponentT extends AltComponent> {
-  new(): ComponentT;
-}
-
 
 enum QueryType {
   Node = 1,
@@ -60,24 +55,24 @@ function undefinedOrNull(x) {
   return x === undefined || x === null;
 }
 
-class MultiRenderer {
+class Renderer implements IMultiNodeRenderer, ISingleNodeRenderer {
   protected context: { [key: string]: any };
   protected onLastValue;
   protected onceFlag: boolean;
-  protected parentRenderer: MultiRenderer;
+  protected parentRenderer: Renderer;
   protected _bindings: NodeBinding[];
 
-  static Main = new MultiRenderer(document.body, null);
+  static Main = new Renderer(document.body, null);
 
-  static Create(nodeOrBindings: Node | NodeBinding[]) {
+  static Create(nodeOrBindings: Node | NodeBinding[]): ISingleNodeRenderer {
     return Renderer.Main.create(nodeOrBindings);
   }
 
-  static CreateMulti(nodeOrBindings: Node | NodeBinding[]) {
+  static CreateMulti(nodeOrBindings: Node | NodeBinding[]): IMultiNodeRenderer {
     return Renderer.Main.createMulti(nodeOrBindings);
   }
 
-  protected constructor(nodeOrBindings: Node | NodeBinding[], parent: MultiRenderer) {
+  protected constructor(nodeOrBindings: Node | NodeBinding[], parent: Renderer) {
     if (Array.isArray(nodeOrBindings)) {
       this._bindings = nodeOrBindings;
     } else {
@@ -98,12 +93,36 @@ class MultiRenderer {
     return this._bindings;
   }
 
+  public get elem(): HTMLElement {
+    return this.node as HTMLElement;
+  }
+  public set elem(elem: HTMLElement) {
+    this.node = elem;
+  }
+
+  public nodeAs<T extends Node>() {
+    return this.node as T;
+  }
+
+  public get node(): Node {
+    return this._bindings[0].node;
+  }
+
+  public set node(node: Node) {
+    let binding = this._bindings[0];
+    if (!binding) {
+      binding = this._bindings[0] = {} as NodeBinding;
+    }
+    binding.node = node;
+    binding.queryType = QueryType.Node;
+  }
+
   public create(nodeOrBindings: Node | NodeBinding[]) {
     return new Renderer(nodeOrBindings, this);
   }
 
   public createMulti(nodeOrBindings: Node | NodeBinding[]) {
-    return new MultiRenderer(nodeOrBindings, this);
+    return new Renderer(nodeOrBindings, this);
   }
 
   public get binding() {
@@ -118,8 +137,8 @@ class MultiRenderer {
     return context as T;
   }
 
-  public mount<ComponentT extends AltMultiComponent>(
-    componentCtor: MultiComponentConstructor<ComponentT>,
+  public mount<ComponentT>(
+    componentCtor: ComponentConstructor<ComponentT>,
     key?: string): ComponentT
   {
     let componentKey = this.getComponentKey(key, componentCtor);
@@ -148,7 +167,7 @@ class MultiRenderer {
     return context.result;
   }
 
-  public queryAll(selector: string): MultiRenderer {
+  public queryAll(selector: string): Renderer {
     let context = this.context[selector];
     if (!context) {
       context = this.context[selector] = {
@@ -164,7 +183,7 @@ class MultiRenderer {
     return context.result;
   }
 
-  public getEntries(entry: string): MultiRenderer {
+  public getEntries(entry: string): Renderer {
     let context = this.context[entry];
     if (!context) {
       context = this.context[entry] = {};
@@ -197,7 +216,7 @@ class MultiRenderer {
     return context.renderer;
   }
 
-  public findNodes(entry: string): MultiRenderer {
+  public findNodes(entry: string): Renderer {
     let context = this.context[entry];
     if (!context) {
       context = this.context[entry] = {};
@@ -208,7 +227,7 @@ class MultiRenderer {
     return context.renderer;
   }
 
-  public on<T>(value: T, callback: (renderer: MultiRenderer, value?: T, prevValue?: T) => T | void, key?: string): void {
+  public on<T>(value: T, callback: (renderer: Renderer, value?: T, prevValue?: T) => T | void, key?: string): void {
     let lastValue = key ? this.context[key] : this.onLastValue;
     if (this.onLastValue !== value) {
       let result = callback(this, value, this.onLastValue);
@@ -221,7 +240,7 @@ class MultiRenderer {
     }
   }
 
-  public once(callback: (renderer: MultiRenderer) => void): void {
+  public once(callback: (renderer: Renderer) => void): void {
     if (!this.onceFlag) {
       this.onceFlag = true;
       callback(this);
@@ -369,7 +388,7 @@ class MultiRenderer {
     return idlName;
   }
 
-  protected getComponentKey(key: string, component: MultiComponentConstructor<any>) {
+  protected getComponentKey(key: string, component: ComponentConstructor<any>) {
     let result = key || "";
     if (component.name) {
       result += component.name;
@@ -391,49 +410,43 @@ class MultiRenderer {
   };
 }
 
-class Renderer extends MultiRenderer {
-  public get elem(): HTMLElement {
-    return this.node as HTMLElement;
-  }
-  public set elem(elem: HTMLElement) {
-    this.node = elem;
-  }
+interface IBaseRenderer {
+  create(nodeOrBindings: Node | NodeBinding[]): ISingleNodeRenderer;
+  createMulti(nodeOrBindings: Node | NodeBinding[]): IMultiNodeRenderer;
+  binding: NodeBinding;
+  getContext<T>(key: string, createContext?: () => T): T;
+  query(selector: string): ISingleNodeRenderer;
+  queryAll(selector: string): IMultiNodeRenderer;
+  getEntries(entry: string): IMultiNodeRenderer;
+  getEntry(entry: string): ISingleNodeRenderer;
+  findNode(entry: string): ISingleNodeRenderer;
+  findNodes(entry: string): IMultiNodeRenderer; 
+  set<T>(stub: string, value: T): void;  
+  showIf(templateSelector: string, value: boolean): void;
+}
 
-  public nodeAs<T extends Node>() {
-    return this.node as T;
-  }
-
-  public get node(): Node {
-    return this._bindings[0].node;
-  }
-
-  public set node(node: Node) {
-    let binding = this._bindings[0];
-    if (!binding) {
-      binding = this._bindings[0] = {} as NodeBinding;
-    }
-    binding.node = node;
-    binding.queryType = QueryType.Node;
-  }
-
-  public mount<ComponentT extends AltMultiComponent>(
-    componentCtor: MultiComponentConstructor<ComponentT>,
-    key?: string): ComponentT;
-  public mount<ComponentT extends AltComponent>(
+interface IMultiNodeRenderer extends IBaseRenderer {
+  nodes: Node[];
+  bindings: NodeBinding[];
+  mount<ComponentT extends AltMultiComponent>(
     componentCtor: ComponentConstructor<ComponentT>,
-    key?: string): ComponentT {
-    return super.mount(componentCtor as any, key) as any;
-  }
+    key?: string): ComponentT;
+  on<T>(value: T, callback: (renderer: IMultiNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
+  once(callback: (renderer: IMultiNodeRenderer) => void): void;
+  repeat<T>(templateSelector: string, items: T[], update: (renderer: IMultiNodeRenderer, model: T) => void): void;
+}
 
-  on<T>(value: T, callback: (renderer: MultiRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
-  on<T>(value: T, callback: (renderer: Renderer, value?: T, prevValue?: T) => T | void, key?: string): void {
-    return super.on(value, callback, key);
-  }
-
-  once(callback: (renderer: MultiRenderer) => void): void;
-  once(callback: (renderer: Renderer) => void): void {
-    return super.once(callback);
-  }
+interface ISingleNodeRenderer extends IBaseRenderer {
+  elem: HTMLElement;  
+  node: Node;
+  binding: NodeBinding;
+  nodeAs<T extends Node>(): T;
+  mount<ComponentT extends AltComponent>(
+    componentCtor: ComponentConstructor<ComponentT>,
+    key?: string): ComponentT;
+  on<T>(value: T, callback: (renderer: ISingleNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
+  once(callback: (renderer: ISingleNodeRenderer) => void): void;
+  repeat<T>(templateSelector: string, items: T[], update: (renderer: ISingleNodeRenderer, model: T) => void): void;
 }
 
 var ATTRIBUTE_TO_IDL_MAP: { [attributeName: string]: string } = {

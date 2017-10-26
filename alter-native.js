@@ -1,13 +1,3 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var QueryType;
 (function (QueryType) {
     QueryType[QueryType["Node"] = 1] = "Node";
@@ -40,8 +30,8 @@ function definedNotNull(x) {
 function undefinedOrNull(x) {
     return x === undefined || x === null;
 }
-var MultiRenderer = /** @class */ (function () {
-    function MultiRenderer(nodeOrBindings, parent) {
+var Renderer = /** @class */ (function () {
+    function Renderer(nodeOrBindings, parent) {
         if (Array.isArray(nodeOrBindings)) {
             this._bindings = nodeOrBindings;
         }
@@ -54,47 +44,75 @@ var MultiRenderer = /** @class */ (function () {
         this.context = {};
         this.parentRenderer = parent;
     }
-    MultiRenderer.Create = function (nodeOrBindings) {
+    Renderer.Create = function (nodeOrBindings) {
         return Renderer.Main.create(nodeOrBindings);
     };
-    MultiRenderer.CreateMulti = function (nodeOrBindings) {
+    Renderer.CreateMulti = function (nodeOrBindings) {
         return Renderer.Main.createMulti(nodeOrBindings);
     };
-    Object.defineProperty(MultiRenderer.prototype, "nodes", {
+    Object.defineProperty(Renderer.prototype, "nodes", {
         get: function () {
             return this._bindings.map(function (x) { return x.node; });
         },
         enumerable: true,
         configurable: true
     });
-    Object.defineProperty(MultiRenderer.prototype, "bindings", {
+    Object.defineProperty(Renderer.prototype, "bindings", {
         get: function () {
             return this._bindings;
         },
         enumerable: true,
         configurable: true
     });
-    MultiRenderer.prototype.create = function (nodeOrBindings) {
+    Object.defineProperty(Renderer.prototype, "elem", {
+        get: function () {
+            return this.node;
+        },
+        set: function (elem) {
+            this.node = elem;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Renderer.prototype.nodeAs = function () {
+        return this.node;
+    };
+    Object.defineProperty(Renderer.prototype, "node", {
+        get: function () {
+            return this._bindings[0].node;
+        },
+        set: function (node) {
+            var binding = this._bindings[0];
+            if (!binding) {
+                binding = this._bindings[0] = {};
+            }
+            binding.node = node;
+            binding.queryType = QueryType.Node;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Renderer.prototype.create = function (nodeOrBindings) {
         return new Renderer(nodeOrBindings, this);
     };
-    MultiRenderer.prototype.createMulti = function (nodeOrBindings) {
-        return new MultiRenderer(nodeOrBindings, this);
+    Renderer.prototype.createMulti = function (nodeOrBindings) {
+        return new Renderer(nodeOrBindings, this);
     };
-    Object.defineProperty(MultiRenderer.prototype, "binding", {
+    Object.defineProperty(Renderer.prototype, "binding", {
         get: function () {
             return this._bindings[0];
         },
         enumerable: true,
         configurable: true
     });
-    MultiRenderer.prototype.getContext = function (key, createContext) {
+    Renderer.prototype.getContext = function (key, createContext) {
         var context = this.context[key];
         if (!context) {
             context = this.context[key] = createContext ? createContext() : {};
         }
         return context;
     };
-    MultiRenderer.prototype.mount = function (componentCtor, key) {
+    Renderer.prototype.mount = function (componentCtor, key) {
         var componentKey = this.getComponentKey(key, componentCtor);
         var context = this.getContext(componentKey);
         if (!context.instance) {
@@ -108,7 +126,7 @@ var MultiRenderer = /** @class */ (function () {
         }
         return context.instance;
     };
-    MultiRenderer.prototype.query = function (selector) {
+    Renderer.prototype.query = function (selector) {
         var context = this.context[selector];
         if (!context) {
             context = this.context[selector] = {
@@ -117,7 +135,7 @@ var MultiRenderer = /** @class */ (function () {
         }
         return context.result;
     };
-    MultiRenderer.prototype.queryAll = function (selector) {
+    Renderer.prototype.queryAll = function (selector) {
         var context = this.context[selector];
         if (!context) {
             context = this.context[selector] = {
@@ -130,7 +148,7 @@ var MultiRenderer = /** @class */ (function () {
         }
         return context.result;
     };
-    MultiRenderer.prototype.getEntries = function (entry) {
+    Renderer.prototype.getEntries = function (entry) {
         var _this = this;
         var context = this.context[entry];
         if (!context) {
@@ -141,7 +159,7 @@ var MultiRenderer = /** @class */ (function () {
         }
         return context.renderer;
     };
-    MultiRenderer.prototype.getEntry = function (entry) {
+    Renderer.prototype.getEntry = function (entry) {
         var _this = this;
         var context = this.context[entry];
         if (!context) {
@@ -152,7 +170,7 @@ var MultiRenderer = /** @class */ (function () {
         }
         return context.renderer;
     };
-    MultiRenderer.prototype.findNode = function (entry) {
+    Renderer.prototype.findNode = function (entry) {
         var _this = this;
         var context = this.context[entry];
         if (!context) {
@@ -163,7 +181,7 @@ var MultiRenderer = /** @class */ (function () {
         }
         return context.renderer;
     };
-    MultiRenderer.prototype.findNodes = function (entry) {
+    Renderer.prototype.findNodes = function (entry) {
         var _this = this;
         var context = this.context[entry];
         if (!context) {
@@ -174,7 +192,7 @@ var MultiRenderer = /** @class */ (function () {
         }
         return context.renderer;
     };
-    MultiRenderer.prototype.on = function (value, callback, key) {
+    Renderer.prototype.on = function (value, callback, key) {
         var lastValue = key ? this.context[key] : this.onLastValue;
         if (this.onLastValue !== value) {
             var result = callback(this, value, this.onLastValue);
@@ -187,22 +205,22 @@ var MultiRenderer = /** @class */ (function () {
             }
         }
     };
-    MultiRenderer.prototype.once = function (callback) {
+    Renderer.prototype.once = function (callback) {
         if (!this.onceFlag) {
             this.onceFlag = true;
             callback(this);
         }
     };
-    MultiRenderer.prototype.set = function (stub, value) {
+    Renderer.prototype.set = function (stub, value) {
         this.getEntries(stub).mount(AltSet).set(value);
     };
-    MultiRenderer.prototype.repeat = function (templateSelector, items, update) {
+    Renderer.prototype.repeat = function (templateSelector, items, update) {
         this.query(templateSelector).mount(AltRepeat).repeat(items, update);
     };
-    MultiRenderer.prototype.showIf = function (templateSelector, value) {
+    Renderer.prototype.showIf = function (templateSelector, value) {
         this.query(templateSelector).mount(AltShow).showIf(value);
     };
-    MultiRenderer.prototype.querySelectorInternal = function (selector) {
+    Renderer.prototype.querySelectorInternal = function (selector) {
         var result;
         for (var i = 0; i < this._bindings.length && !result; i++) {
             var node = this._bindings[i].node;
@@ -218,7 +236,7 @@ var MultiRenderer = /** @class */ (function () {
         }
         return result;
     };
-    MultiRenderer.prototype.querySelectorAllInternal = function (selector) {
+    Renderer.prototype.querySelectorAllInternal = function (selector) {
         var result = [];
         for (var i = 0; i < this._bindings.length && !result; i++) {
             var node = this._bindings[i].node;
@@ -232,7 +250,7 @@ var MultiRenderer = /** @class */ (function () {
         }
         return result;
     };
-    MultiRenderer.prototype.fillBindings = function (node, query, bindings, single, queryType) {
+    Renderer.prototype.fillBindings = function (node, query, bindings, single, queryType) {
         if (queryType === undefined || queryType == QueryType.NodeTextContent) {
             if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
                 var parts = node.textContent.split(query);
@@ -287,7 +305,7 @@ var MultiRenderer = /** @class */ (function () {
             }
         }
     };
-    MultiRenderer.prototype.findNodesInternal = function (node, query, bindings, single) {
+    Renderer.prototype.findNodesInternal = function (node, query, bindings, single) {
         var found = false;
         if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.COMMENT_NODE) {
             if (node.textContent.indexOf(query) >= 0) {
@@ -317,14 +335,14 @@ var MultiRenderer = /** @class */ (function () {
             this.findNodesInternal(node.childNodes[i], query, bindings, single);
         }
     };
-    MultiRenderer.prototype.getIdlName = function (attr, node) {
+    Renderer.prototype.getIdlName = function (attr, node) {
         var idlName = ATTRIBUTE_TO_IDL_MAP[attr.name] || attr.name;
         if (!(idlName in node)) {
             idlName = null;
         }
         return idlName;
     };
-    MultiRenderer.prototype.getComponentKey = function (key, component) {
+    Renderer.prototype.getComponentKey = function (key, component) {
         var result = key || "";
         if (component.name) {
             result += component.name;
@@ -334,7 +352,7 @@ var MultiRenderer = /** @class */ (function () {
         }
         return result;
     };
-    MultiRenderer.prototype.hashCode = function (str) {
+    Renderer.prototype.hashCode = function (str) {
         var hash = 0, i, chr;
         if (str.length === 0)
             return hash;
@@ -346,53 +364,9 @@ var MultiRenderer = /** @class */ (function () {
         return hash;
     };
     ;
-    MultiRenderer.Main = new MultiRenderer(document.body, null);
-    return MultiRenderer;
-}());
-var Renderer = /** @class */ (function (_super) {
-    __extends(Renderer, _super);
-    function Renderer() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    Object.defineProperty(Renderer.prototype, "elem", {
-        get: function () {
-            return this.node;
-        },
-        set: function (elem) {
-            this.node = elem;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Renderer.prototype.nodeAs = function () {
-        return this.node;
-    };
-    Object.defineProperty(Renderer.prototype, "node", {
-        get: function () {
-            return this._bindings[0].node;
-        },
-        set: function (node) {
-            var binding = this._bindings[0];
-            if (!binding) {
-                binding = this._bindings[0] = {};
-            }
-            binding.node = node;
-            binding.queryType = QueryType.Node;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Renderer.prototype.mount = function (componentCtor, key) {
-        return _super.prototype.mount.call(this, componentCtor, key);
-    };
-    Renderer.prototype.on = function (value, callback, key) {
-        return _super.prototype.on.call(this, value, callback, key);
-    };
-    Renderer.prototype.once = function (callback) {
-        return _super.prototype.once.call(this, callback);
-    };
+    Renderer.Main = new Renderer(document.body, null);
     return Renderer;
-}(MultiRenderer));
+}());
 var ATTRIBUTE_TO_IDL_MAP = {
     "class": "className",
     "for": "htmlFor"

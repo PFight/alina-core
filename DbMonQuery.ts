@@ -4,7 +4,7 @@
   elapsedClassName: string;
 }
 
-class DbMonQuery extends AltComponent {
+class DbMonQuery implements AltComponent {
   root: Renderer;
 
   initialize(root: Renderer) {

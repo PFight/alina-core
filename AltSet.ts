@@ -1,8 +1,8 @@
 ﻿class AltSet implements AltMultiComponent {
-  root: MultiRenderer;
+  root: Renderer;
   lastValue: any;
 
-  initializeMulti(context: MultiRenderer) {
+  initializeMulti(context: Renderer) {
     this.root = context;
   }
 
