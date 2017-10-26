@@ -259,8 +259,8 @@ class Renderer {
     return context.componentInstance;
   }
 
-  update<T>(stub: string, value: T) {
-    this.componentOn(stub, AltSet).update(value);
+  set<T>(stub: string, value: T) {
+    this.componentOn(stub, AltSet).set(value);
   }
 
   repeat<T>(templateSelector: string, items: T[], update: (renderer: Renderer, model: T) => void) {

@@ -223,8 +223,8 @@ var Renderer = /** @class */ (function () {
         }
         return context.componentInstance;
     };
-    Renderer.prototype.update = function (stub, value) {
-        this.componentOn(stub, AltSet).update(value);
+    Renderer.prototype.set = function (stub, value) {
+        this.componentOn(stub, AltSet).set(value);
     };
     Renderer.prototype.repeat = function (templateSelector, items, update) {
         this.componentOnNode(templateSelector, AltRepeat).repeat(items, update);

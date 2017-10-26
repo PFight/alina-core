@@ -58,21 +58,21 @@ class DbMonTable extends HTMLElement {
   `)
 
   update() {
-    this.root.update("@toggled", !this.toggle);
-    this.root.update("@inputChange", this.onInputChange);
-    this.root.update("@inputText", this.inputValue);
-    this.root.update("@onStartStopClick", this.onStartStop);
-    this.root.update("@startStopButtonText", this.started ? "Стоп" : "Старт");
+    this.root.set("@toggled", !this.toggle);
+    this.root.set("@inputChange", this.onInputChange);
+    this.root.set("@inputText", this.inputValue);
+    this.root.set("@onStartStopClick", this.onStartStop);
+    this.root.set("@startStopButtonText", this.started ? "Стоп" : "Старт");
     this.root.querySelector("input").on(this.toggle, (input) => {
       input.nodeAs<HTMLInputElement>().style.backgroundColor = this.toggle ? "white" : "yellow";
     });
 
     this.root.repeat("#row", this.databases, this.root.once && ((row, db) => {
-      row.update("@dbname", db.dbname);
-      row.update("@countClass", db.lastSample.countClassName);
-      row.update("@queryCount", db.lastSample.nbQueries);
-      row.update("@dbclass", this.toggle ? "dbtestclass1" : null);
-      row.update("@dbclass2", this.toggle ? "dbtestclass2" : "");
+      row.set("@dbname", db.dbname);
+      row.set("@countClass", db.lastSample.countClassName);
+      row.set("@queryCount", db.lastSample.nbQueries);
+      row.set("@dbclass", this.toggle ? "dbtestclass1" : null);
+      row.set("@dbclass2", this.toggle ? "dbtestclass2" : "");
       row.componentOnNode("@queries", DbMonQueryList).update(db.lastSample.topFiveQueries);
     }));
   }

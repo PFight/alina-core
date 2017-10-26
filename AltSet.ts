@@ -6,7 +6,7 @@
     this.root = context;
   }
 
-  update(value) {
+  set(value) {
     if (this.lastValue !== value) {
       let preparedValue = value;
       for (let binding of this.root.bindings) {

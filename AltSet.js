@@ -4,7 +4,7 @@ var AltSet = /** @class */ (function () {
     AltSet.prototype.initialize = function (context) {
         this.root = context;
     };
-    AltSet.prototype.update = function (value) {
+    AltSet.prototype.set = function (value) {
         if (this.lastValue !== value) {
             var preparedValue = value;
             for (var _i = 0, _a = this.root.bindings; _i < _a.length; _i++) {
