@@ -69,7 +69,7 @@ class DbMonTable extends HTMLElement {
     this.root.query("input").on(this.toggle, (input) => {
       input.nodeAs<HTMLInputElement>().style.backgroundColor = this.toggle ? "white" : "yellow";
     });
-    this.root.query("input").once((input) => {
+    this.root.ext(SuperExt).superQuery("input").once((input) => {
       input.nodeAs<HTMLInputElement>().style.color = "green";
     });
     this.root.showIf("#blink", this.toggle);
@@ -80,6 +80,7 @@ class DbMonTable extends HTMLElement {
       row.set("@queryCount", db.lastSample.nbQueries);
       row.set("@dbclass", this.toggle ? "dbtestclass1" : null);
       row.set("@dbclass2", this.toggle ? "dbtestclass2" : "");
+      
       row.findNode("@queries").mount(DbMonQueryList).update(db.lastSample.topFiveQueries);
     }));
   }
@@ -116,3 +117,22 @@ class DbMonTable extends HTMLElement {
   }
 }
 customElements.define('db-mon-table', DbMonTable);
+
+class SuperQuery extends Renderer {
+  constructor(nodesOrBindings: Node[] | NodeBinding[], parent: Renderer) {
+    super(nodesOrBindings, parent);
+  }
+
+  superQuery(selector: string): ISingleNodeRenderer {
+    let context = this.getContext<any>(selector);
+    if (!context.result) {
+      let node = this.querySelectorInternal(selector);
+      context.result = new SuperQuery([node], this);
+    }
+    return context.result;
+  }
+}
+
+function SuperExt(renderer: ISingleNodeRenderer): SuperQuery {
+  return new SuperQuery([renderer.binding], renderer as Renderer);
+}

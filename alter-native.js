@@ -226,6 +226,14 @@ var Renderer = /** @class */ (function () {
     Renderer.prototype.showIf = function (templateSelector, value) {
         this.query(templateSelector).mount(AltShow).showIf(value);
     };
+    Renderer.prototype.ext = function (createExtension) {
+        var key = this.getComponentKey("", createExtension);
+        var context = this.getContext(key);
+        if (!context.extension) {
+            context.extension = createExtension(this);
+        }
+        return context.extension;
+    };
     Renderer.prototype.querySelectorInternal = function (selector) {
         var result;
         for (var i = 0; i < this._bindings.length && !result; i++) {

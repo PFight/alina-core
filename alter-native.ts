@@ -34,6 +34,7 @@ interface IMultiNodeRenderer extends IBaseRenderer {
   on<T>(value: T, callback: (renderer: IMultiNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
   once(callback: (renderer: IMultiNodeRenderer) => void): void;
   repeat<T>(templateSelector: string, items: T[], update: (renderer: IMultiNodeRenderer, model: T) => void): void;
+  ext<T>(extension: (renderer: IMultiNodeRenderer) => T): T;
 }
 
 interface ISingleNodeRenderer extends IBaseRenderer {
@@ -50,6 +51,7 @@ interface ISingleNodeRenderer extends IBaseRenderer {
   on<T>(value: T, callback: (renderer: ISingleNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
   once(callback: (renderer: ISingleNodeRenderer) => void): void;
   repeat<T>(templateSelector: string, items: T[], update: (renderer: ISingleNodeRenderer, model: T) => void): void;
+  ext<T>(extension: (renderer: ISingleNodeRenderer) => T): T;
 }
 
 enum QueryType {
@@ -306,6 +308,15 @@ class Renderer implements IMultiNodeRenderer, ISingleNodeRenderer {
     this.query(templateSelector).mount(AltShow).showIf(value);
   }
 
+  ext<T>(createExtension: (renderer: Renderer) => T): T {
+    let key = this.getComponentKey("", createExtension);
+    let context = this.getContext<any>(key);
+    if (!context.extension) {
+      context.extension = createExtension(this);
+    }
+    return context.extension;
+  }
+
   protected querySelectorInternal(selector: string) {
     let result: Element;
     for (let i = 0; i < this._bindings.length && !result; i++) {
@@ -435,7 +446,7 @@ class Renderer implements IMultiNodeRenderer, ISingleNodeRenderer {
     return idlName;
   }
 
-  protected getComponentKey(key: string, component: ComponentConstructor<any>) {
+  protected getComponentKey(key: string, component: Function) {
     let result = key || "";
     if (component.name) {
       result += component.name;

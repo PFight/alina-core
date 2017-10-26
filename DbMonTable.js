@@ -50,7 +50,7 @@ var DbMonTable = /** @class */ (function (_super) {
         this.root.query("input").on(this.toggle, function (input) {
             input.nodeAs().style.backgroundColor = _this.toggle ? "white" : "yellow";
         });
-        this.root.query("input").once(function (input) {
+        this.root.ext(SuperExt).superQuery("input").once(function (input) {
             input.nodeAs().style.color = "green";
         });
         this.root.showIf("#blink", this.toggle);
@@ -80,3 +80,21 @@ var DbMonTable = /** @class */ (function (_super) {
     return DbMonTable;
 }(HTMLElement));
 customElements.define('db-mon-table', DbMonTable);
+var SuperQuery = /** @class */ (function (_super) {
+    __extends(SuperQuery, _super);
+    function SuperQuery(nodesOrBindings, parent) {
+        return _super.call(this, nodesOrBindings, parent) || this;
+    }
+    SuperQuery.prototype.superQuery = function (selector) {
+        var context = this.getContext(selector);
+        if (!context.result) {
+            var node = this.querySelectorInternal(selector);
+            context.result = new SuperQuery([node], this);
+        }
+        return context.result;
+    };
+    return SuperQuery;
+}(Renderer));
+function SuperExt(renderer) {
+    return new SuperQuery([renderer.binding], renderer);
+}
