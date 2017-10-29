@@ -9,7 +9,7 @@ export interface RepeatExtraOptions<T> {
 export interface RepeatItemContext<T> {
   oldModelItem?: T;
   mounted?: boolean;
-  renderer?: Alina.Renderer;
+  renderer?: Alina.ISingleNodeRenderer;
 }
 
 export interface AlRepeatContext<T> {
@@ -17,24 +17,19 @@ export interface AlRepeatContext<T> {
   insertBefore: HTMLElement | null;
   container: HTMLElement;
   equals?: (a: T, b: T) => boolean;
-  update: (renderer: Alina.Renderer, model: T) => void;
+  update: (renderer: Alina.ISingleNodeRenderer, model: T) => void;
 }
 
-export class AlRepeat implements Alina.ISingleNodeComponent {
+export class AlRepeat extends Alina.SingleNodeComponent {
   itemContexts: RepeatItemContext<any>[] = [];
-  renderer: Alina.Renderer;
   context: AlRepeatContext<any>;
-
-  initialize(context: Alina.Renderer) {
-    this.renderer = context;
-  }
 
   repeat<T>(items: T[], update: (renderer: Alina.Renderer, model: T) => void, options?: RepeatExtraOptions<T>) {
     if (update) {
       this.context = {
-        template: this.renderer.elem as HTMLTemplateElement,
-        container: this.renderer.elem.parentElement,
-        insertBefore: this.renderer.elem,
+        template: this.root.elem as HTMLTemplateElement,
+        container: this.root.elem.parentElement,
+        insertBefore: this.root.elem,
         equals: options && options.equals,
         update: update
       };
@@ -61,7 +56,7 @@ export class AlRepeat implements Alina.ISingleNodeComponent {
       // Create node
       if (!itemContext.renderer) {
         let node = Alina.fromTemplate(props.template);
-        itemContext.renderer = this.renderer.create(node);
+        itemContext.renderer = this.root.create(node);
       }
 
       // Fill content

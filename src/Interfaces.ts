@@ -25,8 +25,32 @@ export class MultiNodeComponent implements IMultiNodeComponent {
   }
 }
 
+export type FuncSingleNodeComponent<PropsT, RetT> =
+  (root: ISingleNodeRenderer, props: PropsT) => RetT;
+export type FuncMultiNodeComponent<PropsT, RetT> =
+  (root: IMultiNodeRenderer, props: PropsT) => RetT;
+
+
 export interface ComponentConstructor<ComponentT> {
   new(): ComponentT;
+}
+
+export class FuncSingleNodeComponentWrapper<PropsT, RetT> {
+  context: ISingleNodeRenderer;
+  component: FuncSingleNodeComponent<PropsT, RetT>;
+
+  with(props: PropsT): RetT {
+    return this.component(this.context, props);
+  }
+}
+
+export class FuncMultiNodeComponentWrapper<PropsT, RetT> {
+  context: IMultiNodeRenderer;
+  component: FuncMultiNodeComponent<PropsT, RetT>;
+
+  with(props: PropsT): RetT {
+    return this.component(this.context, props);
+  }
 }
 
 export interface IBaseRenderer {
@@ -52,6 +76,10 @@ export interface IMultiNodeRenderer extends IBaseRenderer {
   mount<ComponentT extends IMultiNodeComponent>(
     componentCtor: ComponentConstructor<ComponentT>,
     key?: string): ComponentT;
+  call?<PropsT, RetT>(
+    component: FuncMultiNodeComponent<PropsT, RetT>,
+    key?: string): FuncMultiNodeComponentWrapper<PropsT, RetT>;
+
   on<T>(value: T, callback: (renderer: IMultiNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
   once(callback: (renderer: IMultiNodeRenderer) => void): void;
   repeat<T>(templateSelector: string, items: T[], update: (renderer: IMultiNodeRenderer, model: T) => void): void;
@@ -69,6 +97,14 @@ export interface ISingleNodeRenderer extends IBaseRenderer {
   mount<ComponentT extends IMultiNodeComponent>(
     componentCtor: ComponentConstructor<ComponentT>,
     key?: string): ComponentT;
+
+  call?<PropsT, RetT>(
+    component: FuncMultiNodeComponent<PropsT, RetT>,
+    key?: string): FuncMultiNodeComponentWrapper<PropsT, RetT>;
+  call?<PropsT, RetT>(
+    component: FuncSingleNodeComponent<PropsT, RetT>,
+    key?: string): FuncSingleNodeComponentWrapper<PropsT, RetT>;
+
   on<T>(value: T, callback: (renderer: ISingleNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
   once(callback: (renderer: ISingleNodeRenderer) => void): void;
   repeat<T>(templateSelector: string, items: T[], update: (renderer: ISingleNodeRenderer, model: T) => void): void;
