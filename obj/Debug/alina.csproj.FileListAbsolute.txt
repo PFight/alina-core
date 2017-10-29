@@ -1,5 +1,0 @@
-C:\Main\Work\alina\obj\Debug\alina.csprojResolveAssemblyReference.cache
-C:\Main\Work\alina\bin\alina.dll
-C:\Main\Work\alina\bin\alina.pdb
-C:\Main\Work\alina\obj\Debug\alina.dll
-C:\Main\Work\alina\obj\Debug\alina.pdb

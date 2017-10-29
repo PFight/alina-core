@@ -6,4 +6,6 @@ src/**.*js
 !node_modules/maskjs
 !node_modules/maskjs/lib
 !node_modules/maskjs/lib/mask.js
-.vs/
+.vs
+bin
+obj
