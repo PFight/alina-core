@@ -169,8 +169,15 @@ export class Renderer implements IMultiNodeRenderer, ISingleNodeRenderer {
     if (!binding) {
       binding = this._bindings[0] = {} as NodeBinding;
     }
-    binding.node = node;
-    binding.queryType = QueryType.Node;
+    let oldVal = binding.node;
+    if (oldVal != node) {
+      binding.node = node;
+      binding.queryType = QueryType.Node;
+
+      if (this.parentRenderer && this.parentRenderer.node == oldVal) {
+        this.parentRenderer.node = node;
+      }
+    }
   }
 
   public create(nodeOrBinding: Node | NodeBinding) {
@@ -200,15 +207,9 @@ export class Renderer implements IMultiNodeRenderer, ISingleNodeRenderer {
     let componentKey = this.getComponentKey(key, componentCtor);
     let context = this.getContext<any>(componentKey);
     if (!context.instance) {
-      let sameAsParent = this.parentRenderer && this.parentRenderer.node == this.node;
-
+      // Mount component
       context.instance = new componentCtor();
       (context.instance as IMultiNodeComponent).initialize(this);
-
-      // Component can replace current node
-      if (sameAsParent && this.parentRenderer.node != this.node) {
-        this.parentRenderer.node = this.node;
-      }
     }
     return context.instance;
   }

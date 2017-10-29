@@ -1,6 +1,6 @@
 ﻿import * as Alina from "./alina";
 const undefinedOrNull = Alina.undefinedOrNull;
-const definedNotNull = Alina.undefinedOrNull;
+const definedNotNull = Alina.definedNotNull;
 
 export interface RepeatExtraOptions<T> {
   equals?: (a: T, b: T) => boolean;
