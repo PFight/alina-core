@@ -4,21 +4,84 @@
 	(factory((global.alina = {})));
 }(this, (function (exports) { 'use strict';
 
-var undefinedOrNull = undefinedOrNull$1;
-var definedNotNull = definedNotNull$1;
-var AlRepeat = (function () {
-    function AlRepeat() {
-        this.itemContexts = [];
+var SingleNodeComponent = (function () {
+    function SingleNodeComponent() {
     }
-    AlRepeat.prototype.initialize = function (context) {
-        this.renderer = context;
+    SingleNodeComponent.prototype.initialize = function (context) {
+        this.root = context;
     };
+    return SingleNodeComponent;
+}());
+var MultiNodeComponent = (function () {
+    function MultiNodeComponent() {
+    }
+    MultiNodeComponent.prototype.initialize = function (context) {
+        this.root = context;
+    };
+    return MultiNodeComponent;
+}());
+;
+(function (QueryType) {
+    QueryType[QueryType["Node"] = 1] = "Node";
+    QueryType[QueryType["NodeAttribute"] = 2] = "NodeAttribute";
+    QueryType[QueryType["NodeTextContent"] = 3] = "NodeTextContent";
+})(exports.QueryType || (exports.QueryType = {}));
+
+function makeTemplate(str) {
+    var elem = document.createElement("template");
+    elem.innerHTML = str.trim();
+    // document.body.appendChild(elem);
+    return elem;
+}
+function fromTemplate(templateElem) {
+    return templateElem.content ?
+        (templateElem.content.firstElementChild || templateElem.content.firstChild).cloneNode(true)
+        :
+            (templateElem.firstElementChild || templateElem.firstChild).cloneNode(true);
+}
+function definedNotNull(x) {
+    return x !== undefined && x !== null;
+}
+function undefinedOrNull(x) {
+    return x === undefined || x === null;
+}
+function getIdlName(attr, node) {
+    var idlName = ATTRIBUTE_TO_IDL_MAP[attr.name] || attr.name;
+    if (!(idlName in node)) {
+        idlName = null;
+    }
+    return idlName;
+}
+var ATTRIBUTE_TO_IDL_MAP = {
+    "class": "className",
+    "for": "htmlFor"
+};
+
+var __extends = (window && window.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var undefinedOrNull$1 = undefinedOrNull;
+var definedNotNull$1 = definedNotNull;
+var AlRepeat = (function (_super) {
+    __extends(AlRepeat, _super);
+    function AlRepeat() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.itemContexts = [];
+        return _this;
+    }
     AlRepeat.prototype.repeat = function (items, update, options) {
         if (update) {
             this.context = {
-                template: this.renderer.elem,
-                container: this.renderer.elem.parentElement,
-                insertBefore: this.renderer.elem,
+                template: this.root.elem,
+                container: this.root.elem.parentElement,
+                insertBefore: this.root.elem,
                 equals: options && options.equals,
                 update: update
             };
@@ -41,7 +104,7 @@ var AlRepeat = (function () {
             // Create node
             if (!itemContext.renderer) {
                 var node = fromTemplate(props.template);
-                itemContext.renderer = this.renderer.create(node);
+                itemContext.renderer = this.root.create(node);
             }
             // Fill content
             props.update(itemContext.renderer, modelItem);
@@ -69,12 +132,12 @@ var AlRepeat = (function () {
         this.itemContexts.splice(firstIndexToRemove, this.itemContexts.length - firstIndexToRemove);
     };
     AlRepeat.prototype.compare = function (a, b, comparer) {
-        return (undefinedOrNull(a) && undefinedOrNull(b)) ||
-            (definedNotNull(a) && definedNotNull(b) && !comparer) ||
-            (definedNotNull(a) && definedNotNull(b) && comparer && comparer(a, b));
+        return (undefinedOrNull$1(a) && undefinedOrNull$1(b)) ||
+            (definedNotNull$1(a) && definedNotNull$1(b) && !comparer) ||
+            (definedNotNull$1(a) && definedNotNull$1(b) && comparer && comparer(a, b));
     };
     return AlRepeat;
-}());
+}(SingleNodeComponent));
 
 var AlSet = (function () {
     function AlSet() {
@@ -455,43 +518,6 @@ var AlFind = (function () {
     return AlFind;
 }());
 
-;
-(function (QueryType) {
-    QueryType[QueryType["Node"] = 1] = "Node";
-    QueryType[QueryType["NodeAttribute"] = 2] = "NodeAttribute";
-    QueryType[QueryType["NodeTextContent"] = 3] = "NodeTextContent";
-})(exports.QueryType || (exports.QueryType = {}));
-
-function makeTemplate(str) {
-    var elem = document.createElement("template");
-    elem.innerHTML = str.trim();
-    // document.body.appendChild(elem);
-    return elem;
-}
-function fromTemplate(templateElem) {
-    return templateElem.content ?
-        (templateElem.content.firstElementChild || templateElem.content.firstChild).cloneNode(true)
-        :
-            (templateElem.firstElementChild || templateElem.firstChild).cloneNode(true);
-}
-function definedNotNull$1(x) {
-    return x !== undefined && x !== null;
-}
-function undefinedOrNull$1(x) {
-    return x === undefined || x === null;
-}
-function getIdlName(attr, node) {
-    var idlName = ATTRIBUTE_TO_IDL_MAP[attr.name] || attr.name;
-    if (!(idlName in node)) {
-        idlName = null;
-    }
-    return idlName;
-}
-var ATTRIBUTE_TO_IDL_MAP = {
-    "class": "className",
-    "for": "htmlFor"
-};
-
 var Slot = (function () {
     function Slot(component) {
         this.component = component;
@@ -638,6 +664,14 @@ var Renderer = (function () {
         });
         return context.instance;
     };
+    Renderer.prototype.call = function (component, props, key) {
+        var _this = this;
+        var componentKey = this.getComponentKey(key, component);
+        var context = this.getContext(componentKey, function () { return ({
+            renderer: _this.createMulti(_this.bindings)
+        }); });
+        return component(context.renderer, props);
+    };
     Renderer.prototype.query = function (selector) {
         return this.mount(this.getQueryComponent()).query(selector);
     };
@@ -722,6 +756,14 @@ var Renderer = (function () {
 }());
 var COMPONENT_KEY_COUNTER = 1;
 
+exports.SingleNodeComponent = SingleNodeComponent;
+exports.MultiNodeComponent = MultiNodeComponent;
+exports.makeTemplate = makeTemplate;
+exports.fromTemplate = fromTemplate;
+exports.definedNotNull = definedNotNull;
+exports.undefinedOrNull = undefinedOrNull;
+exports.getIdlName = getIdlName;
+exports.ATTRIBUTE_TO_IDL_MAP = ATTRIBUTE_TO_IDL_MAP;
 exports.AlRepeat = AlRepeat;
 exports.AlSet = AlSet;
 exports.AlShow = AlShow;
@@ -729,12 +771,6 @@ exports.AlTemplate = AlTemplate;
 exports.AlQuery = AlQuery;
 exports.AlEntry = AlEntry;
 exports.AlFind = AlFind;
-exports.makeTemplate = makeTemplate;
-exports.fromTemplate = fromTemplate;
-exports.definedNotNull = definedNotNull$1;
-exports.undefinedOrNull = undefinedOrNull$1;
-exports.getIdlName = getIdlName;
-exports.ATTRIBUTE_TO_IDL_MAP = ATTRIBUTE_TO_IDL_MAP;
 exports.Slot = Slot;
 exports.Renderer = Renderer;
 

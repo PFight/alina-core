@@ -98,7 +98,7 @@ export class Renderer implements Alina.IMultiNodeRenderer, Alina.ISingleNodeRend
     return context as T;
   }
 
-  public on<T>(value: T, callback: (renderer: Renderer, value?: T, prevValue?: T) => T | void, key?: string): void {
+  public on<T>(value: T, callback: (renderer, value?: T, prevValue?: T) => T | void, key?: string): void {
     let lastValue = key ? this.context[key] : this.onLastValue;
     if (this.onLastValue !== value) {
       let result = callback(this, value, this.onLastValue);
@@ -111,14 +111,14 @@ export class Renderer implements Alina.IMultiNodeRenderer, Alina.ISingleNodeRend
     }
   }
 
-  public once(callback: (renderer: Renderer) => void): void {
+  public once(callback: (renderer) => void): void {
     if (!this.onceFlag) {
       this.onceFlag = true;
       callback(this);
     }
   }
 
-  public ext<T>(createExtension: (renderer: Renderer) => T): T {
+  public ext<T>(createExtension: (renderer) => T): T {
     let key = this.getComponentKey("", createExtension);
     let context = this.getContext<any>(key);
     if (!context.extension) {
@@ -138,6 +138,17 @@ export class Renderer implements Alina.IMultiNodeRenderer, Alina.ISingleNodeRend
       return { instance };
     });
     return context.instance;
+  }
+
+  call<PropsT, RetT>(
+    component,
+    props: PropsT,
+    key?: string): RetT {
+    let componentKey = this.getComponentKey(key, component);
+    let context = this.getContext(componentKey, () => ({
+      renderer: this.createMulti(this.bindings)
+    }));
+    return component(context.renderer, props);
   }
 
   public query(selector: string): Alina.ISingleNodeRenderer {

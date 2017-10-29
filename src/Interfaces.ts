@@ -30,7 +30,6 @@ export type FuncSingleNodeComponent<PropsT, RetT> =
 export type FuncMultiNodeComponent<PropsT, RetT> =
   (root: IMultiNodeRenderer, props: PropsT) => RetT;
 
-
 export interface ComponentConstructor<ComponentT> {
   new(): ComponentT;
 }
@@ -58,7 +57,7 @@ export interface IMultiNodeRenderer extends IBaseRenderer {
   mount<ComponentT extends IMultiNodeComponent>(
     componentCtor: ComponentConstructor<ComponentT>,
     key?: string): ComponentT;
-  call?<PropsT, RetT>(
+  call<PropsT, RetT>(
     component: FuncMultiNodeComponent<PropsT, RetT>,
     props: PropsT,
     key?: string): RetT;
@@ -81,11 +80,11 @@ export interface ISingleNodeRenderer extends IBaseRenderer {
     componentCtor: ComponentConstructor<ComponentT>,
     key?: string): ComponentT;
 
-  call?<PropsT, RetT>(
+  call<PropsT, RetT>(
     component: FuncMultiNodeComponent<PropsT, RetT>,
     props: PropsT,
     key?: string): RetT;
-  call?<PropsT, RetT>(
+  call<PropsT, RetT>(
     component: FuncSingleNodeComponent<PropsT, RetT>,
     props: PropsT,
     key?: string): RetT;

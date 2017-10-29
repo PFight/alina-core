@@ -1,3 +1,95 @@
+declare module "Interfaces" {
+    export interface IComponent {
+    }
+    export interface ISingleNodeComponent extends IComponent {
+        initialize(context: ISingleNodeRenderer): void;
+    }
+    export class SingleNodeComponent implements ISingleNodeComponent {
+        root: ISingleNodeRenderer;
+        initialize(context: ISingleNodeRenderer): void;
+    }
+    export interface IMultiNodeComponent extends IComponent {
+        initialize(context: IMultiNodeRenderer): void;
+    }
+    export class MultiNodeComponent implements IMultiNodeComponent {
+        root: IMultiNodeRenderer;
+        initialize(context: IMultiNodeRenderer): void;
+    }
+    export type FuncSingleNodeComponent<PropsT, RetT> = (root: ISingleNodeRenderer, props: PropsT) => RetT;
+    export type FuncMultiNodeComponent<PropsT, RetT> = (root: IMultiNodeRenderer, props: PropsT) => RetT;
+    export interface ComponentConstructor<ComponentT> {
+        new (): ComponentT;
+    }
+    export interface IBaseRenderer {
+        create(nodeOrBindings: Node | NodeBinding): ISingleNodeRenderer;
+        createMulti(nodesOrBindings: Node[] | NodeBinding[]): IMultiNodeRenderer;
+        readonly parent: IBaseRenderer;
+        binding: NodeBinding;
+        getContext<T>(key: string, createContext?: () => T): T;
+        query(selector: string): ISingleNodeRenderer;
+        queryAll(selector: string): IMultiNodeRenderer;
+        getEntries(entry: string): IMultiNodeRenderer;
+        getEntry(entry: string): ISingleNodeRenderer;
+        findNode(entry: string): ISingleNodeRenderer;
+        findNodes(entry: string): IMultiNodeRenderer;
+        set<T>(stub: string, value: T): void;
+        showIf(templateSelector: string, value: boolean): void;
+        tpl(key?: string): ITemplateProcessor;
+    }
+    export interface IMultiNodeRenderer extends IBaseRenderer {
+        nodes: Node[];
+        bindings: NodeBinding[];
+        mount<ComponentT extends IMultiNodeComponent>(componentCtor: ComponentConstructor<ComponentT>, key?: string): ComponentT;
+        call<PropsT, RetT>(component: FuncMultiNodeComponent<PropsT, RetT>, props: PropsT, key?: string): RetT;
+        on<T>(value: T, callback: (renderer: IMultiNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
+        once(callback: (renderer: IMultiNodeRenderer) => void): void;
+        repeat<T>(templateSelector: string, items: T[], update: (renderer: IMultiNodeRenderer, model: T) => void): void;
+        ext<T>(extension: (renderer: IMultiNodeRenderer) => T): T;
+    }
+    export interface ISingleNodeRenderer extends IBaseRenderer {
+        elem: HTMLElement;
+        node: Node;
+        binding: NodeBinding;
+        nodeAs<T extends Node>(): T;
+        mount<ComponentT extends ISingleNodeComponent>(componentCtor: ComponentConstructor<ComponentT>, key?: string): ComponentT;
+        mount<ComponentT extends IMultiNodeComponent>(componentCtor: ComponentConstructor<ComponentT>, key?: string): ComponentT;
+        call<PropsT, RetT>(component: FuncMultiNodeComponent<PropsT, RetT>, props: PropsT, key?: string): RetT;
+        call<PropsT, RetT>(component: FuncSingleNodeComponent<PropsT, RetT>, props: PropsT, key?: string): RetT;
+        on<T>(value: T, callback: (renderer: ISingleNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
+        once(callback: (renderer: ISingleNodeRenderer) => void): void;
+        repeat<T>(templateSelector: string, items: T[], update: (renderer: ISingleNodeRenderer, model: T) => void): void;
+        ext<T>(extension: (renderer: ISingleNodeRenderer) => T): T;
+    }
+    export interface ITemplateProcessor {
+        appendChildren<T>(template: HTMLTemplateElement, render: (renderer: IMultiNodeRenderer) => T | void): T | void;
+        appendChild<T>(template: HTMLTemplateElement, render: (renderer: ISingleNodeRenderer) => T | void): T | void;
+        replaceChildren<T>(template: HTMLTemplateElement, render: (renderer: IMultiNodeRenderer) => T | void): T | void;
+        replaceChild<T>(template: HTMLTemplateElement, render: (renderer: ISingleNodeRenderer) => T | void): T | void;
+        replace<T>(template: HTMLTemplateElement, render: (renderer: ISingleNodeRenderer) => T | void): T | void;
+    }
+    export enum QueryType {
+        Node = 1,
+        NodeAttribute = 2,
+        NodeTextContent = 3,
+    }
+    export interface NodeBinding {
+        node: Node;
+        queryType: QueryType;
+        query?: string;
+        attributeName?: string;
+        idlName?: string;
+    }
+}
+declare module "Utils" {
+    export function makeTemplate(str: string): HTMLTemplateElement;
+    export function fromTemplate(templateElem: HTMLTemplateElement): Node;
+    export function definedNotNull(x: any): boolean;
+    export function undefinedOrNull(x: any): boolean;
+    export function getIdlName(attr: Attr, node: Node): string;
+    export var ATTRIBUTE_TO_IDL_MAP: {
+        [attributeName: string]: string;
+    };
+}
 declare module "AlRepeat" {
     import * as Alina from "alina";
     export interface RepeatExtraOptions<T> {
@@ -6,20 +98,18 @@ declare module "AlRepeat" {
     export interface RepeatItemContext<T> {
         oldModelItem?: T;
         mounted?: boolean;
-        renderer?: Alina.Renderer;
+        renderer?: Alina.ISingleNodeRenderer;
     }
     export interface AlRepeatContext<T> {
         template: HTMLTemplateElement;
         insertBefore: HTMLElement | null;
         container: HTMLElement;
         equals?: (a: T, b: T) => boolean;
-        update: (renderer: Alina.Renderer, model: T) => void;
+        update: (renderer: Alina.ISingleNodeRenderer, model: T) => void;
     }
-    export class AlRepeat implements Alina.ISingleNodeComponent {
+    export class AlRepeat extends Alina.SingleNodeComponent {
         itemContexts: RepeatItemContext<any>[];
-        renderer: Alina.Renderer;
         context: AlRepeatContext<any>;
-        initialize(context: Alina.Renderer): void;
         repeat<T>(items: T[], update: (renderer: Alina.Renderer, model: T) => void, options?: RepeatExtraOptions<T>): void;
         repeatEx<T>(items: T[], context: AlRepeatContext<T>): void;
         protected compare(a: any, b: any, comparer: any): any;
@@ -81,83 +171,6 @@ declare module "AlFind" {
         protected findNodesInternal(node: Node, query: string, bindings: Alina.NodeBinding[], single: boolean): void;
     }
 }
-declare module "Interfaces" {
-    export interface ISingleNodeComponent {
-        initialize(context: ISingleNodeRenderer): void;
-    }
-    export interface IMultiNodeComponent {
-        initialize(context: IMultiNodeRenderer): void;
-    }
-    export interface ComponentConstructor<ComponentT> {
-        new (): ComponentT;
-    }
-    export interface IBaseRenderer {
-        create(nodeOrBindings: Node | NodeBinding): ISingleNodeRenderer;
-        createMulti(nodesOrBindings: Node[] | NodeBinding[]): IMultiNodeRenderer;
-        readonly parent: IBaseRenderer;
-        binding: NodeBinding;
-        getContext<T>(key: string, createContext?: () => T): T;
-        query(selector: string): ISingleNodeRenderer;
-        queryAll(selector: string): IMultiNodeRenderer;
-        getEntries(entry: string): IMultiNodeRenderer;
-        getEntry(entry: string): ISingleNodeRenderer;
-        findNode(entry: string): ISingleNodeRenderer;
-        findNodes(entry: string): IMultiNodeRenderer;
-        set<T>(stub: string, value: T): void;
-        showIf(templateSelector: string, value: boolean): void;
-        tpl(key?: string): ITemplateProcessor;
-    }
-    export interface IMultiNodeRenderer extends IBaseRenderer {
-        nodes: Node[];
-        bindings: NodeBinding[];
-        mount<ComponentT extends IMultiNodeComponent>(componentCtor: ComponentConstructor<ComponentT>, key?: string): ComponentT;
-        on<T>(value: T, callback: (renderer: IMultiNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
-        once(callback: (renderer: IMultiNodeRenderer) => void): void;
-        repeat<T>(templateSelector: string, items: T[], update: (renderer: IMultiNodeRenderer, model: T) => void): void;
-        ext<T>(extension: (renderer: IMultiNodeRenderer) => T): T;
-    }
-    export interface ISingleNodeRenderer extends IBaseRenderer {
-        elem: HTMLElement;
-        node: Node;
-        binding: NodeBinding;
-        nodeAs<T extends Node>(): T;
-        mount<ComponentT extends ISingleNodeComponent>(componentCtor: ComponentConstructor<ComponentT>, key?: string): ComponentT;
-        mount<ComponentT extends IMultiNodeComponent>(componentCtor: ComponentConstructor<ComponentT>, key?: string): ComponentT;
-        on<T>(value: T, callback: (renderer: ISingleNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
-        once(callback: (renderer: ISingleNodeRenderer) => void): void;
-        repeat<T>(templateSelector: string, items: T[], update: (renderer: ISingleNodeRenderer, model: T) => void): void;
-        ext<T>(extension: (renderer: ISingleNodeRenderer) => T): T;
-    }
-    export interface ITemplateProcessor {
-        appendChildren<T>(template: HTMLTemplateElement, render: (renderer: IMultiNodeRenderer) => T | void): T | void;
-        appendChild<T>(template: HTMLTemplateElement, render: (renderer: ISingleNodeRenderer) => T | void): T | void;
-        replaceChildren<T>(template: HTMLTemplateElement, render: (renderer: IMultiNodeRenderer) => T | void): T | void;
-        replaceChild<T>(template: HTMLTemplateElement, render: (renderer: ISingleNodeRenderer) => T | void): T | void;
-        replace<T>(template: HTMLTemplateElement, render: (renderer: ISingleNodeRenderer) => T | void): T | void;
-    }
-    export enum QueryType {
-        Node = 1,
-        NodeAttribute = 2,
-        NodeTextContent = 3,
-    }
-    export interface NodeBinding {
-        node: Node;
-        queryType: QueryType;
-        query?: string;
-        attributeName?: string;
-        idlName?: string;
-    }
-}
-declare module "Utils" {
-    export function makeTemplate(str: string): HTMLTemplateElement;
-    export function fromTemplate(templateElem: HTMLTemplateElement): Node;
-    export function definedNotNull(x: any): boolean;
-    export function undefinedOrNull(x: any): boolean;
-    export function getIdlName(attr: Attr, node: Node): string;
-    export var ATTRIBUTE_TO_IDL_MAP: {
-        [attributeName: string]: string;
-    };
-}
 declare module "Slot" {
     export class Slot<T, ComponentT> {
         component: ComponentT;
@@ -197,10 +210,11 @@ declare module "Renderer" {
         readonly binding: Alina.NodeBinding;
         readonly parent: Alina.IBaseRenderer;
         getContext<T>(key: string, createContext?: () => T): T;
-        on<T>(value: T, callback: (renderer: Renderer, value?: T, prevValue?: T) => T | void, key?: string): void;
-        once(callback: (renderer: Renderer) => void): void;
-        ext<T>(createExtension: (renderer: Renderer) => T): T;
+        on<T>(value: T, callback: (renderer, value?: T, prevValue?: T) => T | void, key?: string): void;
+        once(callback: (renderer) => void): void;
+        ext<T>(createExtension: (renderer) => T): T;
         mount<ComponentT>(componentCtor: Alina.ComponentConstructor<ComponentT>, key?: string): ComponentT;
+        call<PropsT, RetT>(component: any, props: PropsT, key?: string): RetT;
         query(selector: string): Alina.ISingleNodeRenderer;
         queryAll(selector: string): Alina.IMultiNodeRenderer;
         getEntries(entry: string): Alina.IMultiNodeRenderer;
@@ -218,6 +232,8 @@ declare module "Renderer" {
     }
 }
 declare module "alina" {
+    export * from "Interfaces";
+    export * from "Utils";
     export * from "AlRepeat";
     export * from "AlSet";
     export * from "AlShow";
@@ -225,8 +241,6 @@ declare module "alina" {
     export * from "AlQuery";
     export * from "AlEntry";
     export * from "AlFind";
-    export * from "Interfaces";
-    export * from "Utils";
     export * from "Slot";
     export * from "Renderer";
 }
