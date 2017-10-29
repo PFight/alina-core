@@ -35,24 +35,6 @@ export interface ComponentConstructor<ComponentT> {
   new(): ComponentT;
 }
 
-export class FuncSingleNodeComponentWrapper<PropsT, RetT> {
-  context: ISingleNodeRenderer;
-  component: FuncSingleNodeComponent<PropsT, RetT>;
-
-  with(props: PropsT): RetT {
-    return this.component(this.context, props);
-  }
-}
-
-export class FuncMultiNodeComponentWrapper<PropsT, RetT> {
-  context: IMultiNodeRenderer;
-  component: FuncMultiNodeComponent<PropsT, RetT>;
-
-  with(props: PropsT): RetT {
-    return this.component(this.context, props);
-  }
-}
-
 export interface IBaseRenderer {
   create(nodeOrBindings: Node | NodeBinding): ISingleNodeRenderer;
   createMulti(nodesOrBindings: Node[] | NodeBinding[]): IMultiNodeRenderer;
@@ -78,7 +60,8 @@ export interface IMultiNodeRenderer extends IBaseRenderer {
     key?: string): ComponentT;
   call?<PropsT, RetT>(
     component: FuncMultiNodeComponent<PropsT, RetT>,
-    key?: string): FuncMultiNodeComponentWrapper<PropsT, RetT>;
+    props: PropsT,
+    key?: string): RetT;
 
   on<T>(value: T, callback: (renderer: IMultiNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
   once(callback: (renderer: IMultiNodeRenderer) => void): void;
@@ -100,10 +83,12 @@ export interface ISingleNodeRenderer extends IBaseRenderer {
 
   call?<PropsT, RetT>(
     component: FuncMultiNodeComponent<PropsT, RetT>,
-    key?: string): FuncMultiNodeComponentWrapper<PropsT, RetT>;
+    props: PropsT,
+    key?: string): RetT;
   call?<PropsT, RetT>(
     component: FuncSingleNodeComponent<PropsT, RetT>,
-    key?: string): FuncSingleNodeComponentWrapper<PropsT, RetT>;
+    props: PropsT,
+    key?: string): RetT;
 
   on<T>(value: T, callback: (renderer: ISingleNodeRenderer, value?: T, prevValue?: T) => T | void, key?: string): void;
   once(callback: (renderer: ISingleNodeRenderer) => void): void;
