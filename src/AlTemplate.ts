@@ -1,6 +1,6 @@
 ﻿import * as Alina from "./alina";
 
-export class AlTemplate implements Alina.ISingleNodeComponent {
+export class AlTemplate implements Alina.ISingleNodeComponent, Alina.ITemplateProcessor {
   root: Alina.ISingleNodeRenderer;
   result: Alina.IMultiNodeRenderer | Alina.ISingleNodeRenderer;
 

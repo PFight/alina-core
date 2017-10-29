@@ -7,6 +7,28 @@ export class Renderer implements Alina.IMultiNodeRenderer, Alina.ISingleNodeRend
   protected parentRenderer: Renderer;
   protected _bindings: Alina.NodeBinding[];
 
+  protected getSetComponent(): Alina.ComponentConstructor<Alina.AlSet> {
+    return Alina.AlSet;
+  }
+  protected getRepeatComponent(): Alina.ComponentConstructor<Alina.AlRepeat> {
+    return Alina.AlRepeat as any;
+  }
+  protected getTemplateComponent(): Alina.ComponentConstructor<Alina.AlTemplate> {
+    return Alina.AlTemplate as any;
+  }
+  protected getQueryComponent(): Alina.ComponentConstructor<Alina.AlQuery> {
+    return Alina.AlQuery as any;
+  }
+  protected getFindComponent(): Alina.ComponentConstructor<Alina.AlFind> {
+    return Alina.AlFind as any;
+  }
+  protected getEntryComponent(): Alina.ComponentConstructor<Alina.AlEntry> {
+    return Alina.AlEntry as any;
+  }
+  protected getShowComponent(): Alina.ComponentConstructor<Alina.AlShow> {
+    return Alina.AlShow as any;
+  }
+
   static Main = new Renderer([document.body], null);
 
   static Create(nodeOrBinding: Node | Alina.NodeBinding): Alina.ISingleNodeRenderer {
@@ -25,7 +47,7 @@ export class Renderer implements Alina.IMultiNodeRenderer, Alina.ISingleNodeRend
     return this._bindings.map(x => x.node);
   }
 
-  public get bindings() {
+  public get bindings(): Alina.NodeBinding[] {
     return this._bindings;
   }
 
@@ -60,7 +82,7 @@ export class Renderer implements Alina.IMultiNodeRenderer, Alina.ISingleNodeRend
     return new Renderer(nodesOrBindings, this);
   }
 
-  public get binding() {
+  public get binding(): Alina.NodeBinding {
     return this._bindings[0];
   }
 
@@ -74,43 +96,6 @@ export class Renderer implements Alina.IMultiNodeRenderer, Alina.ISingleNodeRend
       context = this.context[key] = createContext ? createContext() : {};
     }
     return context as T;
-  }
-
-  public mount<ComponentT>(
-    componentCtor: Alina.ComponentConstructor<ComponentT>,
-    key?: string): ComponentT
-  {
-    let componentKey = this.getComponentKey(key, componentCtor);
-    let context = this.getContext(componentKey, () => {
-      let instance = new componentCtor() as any;
-      (instance as Alina.IMultiNodeComponent).initialize(this);
-      return { instance };
-    });
-    return context.instance;
-  }
-
-  public query(selector: string): Alina.ISingleNodeRenderer {
-    return this.mount(Alina.AlQuery).query(selector);
-  }
-
-  public queryAll(selector: string): Alina.IMultiNodeRenderer {
-    return this.mount(Alina.AlQuery).queryAll(selector);
-  }
-
-  public getEntries(entry: string): Alina.IMultiNodeRenderer {
-    return this.mount(Alina.AlEntry).getEntries(entry);
-  }
-
-  public getEntry(entry: string): Alina.ISingleNodeRenderer {
-    return this.mount(Alina.AlEntry).getEntry(entry);
-  }
-
-  public findNode(entry: string): Alina.ISingleNodeRenderer {
-    return this.mount(Alina.AlFind).findNode(entry);
-  }
-
-  public findNodes(entry: string): Alina.IMultiNodeRenderer {
-    return this.mount(Alina.AlFind).findNodes(entry);
   }
 
   public on<T>(value: T, callback: (renderer: Renderer, value?: T, prevValue?: T) => T | void, key?: string): void {
@@ -133,22 +118,6 @@ export class Renderer implements Alina.IMultiNodeRenderer, Alina.ISingleNodeRend
     }
   }
 
-  public set<T>(stub: string, value: T): void {
-    (this.getEntry(stub) as Alina.ISingleNodeRenderer).mount(Alina.AlSet).set(value);
-  }
-
-  public repeat<T>(templateSelector: string, items: T[], update: (renderer: Renderer, model: T) => void): void {
-    this.query(templateSelector).mount(Alina.AlRepeat).repeat(items, update);
-  }
-
-  public showIf(templateSelector: string, value: boolean): void {
-    this.query(templateSelector).mount(Alina.AlShow).showIf(value);
-  }
-
-  public tpl(key?: string): Alina.AlTemplate {
-    return this.mount(Alina.AlTemplate, key);
-  }
-
   public ext<T>(createExtension: (renderer: Renderer) => T): T {
     let key = this.getComponentKey("", createExtension);
     let context = this.getContext<any>(key);
@@ -156,6 +125,59 @@ export class Renderer implements Alina.IMultiNodeRenderer, Alina.ISingleNodeRend
       context.extension = createExtension(this);
     }
     return context.extension;
+  }
+
+  public mount<ComponentT>(
+    componentCtor: Alina.ComponentConstructor<ComponentT>,
+    key?: string): ComponentT
+  {
+    let componentKey = this.getComponentKey(key, componentCtor);
+    let context = this.getContext(componentKey, () => {
+      let instance = new componentCtor() as any;
+      (instance as Alina.IMultiNodeComponent).initialize(this);
+      return { instance };
+    });
+    return context.instance;
+  }
+
+  public query(selector: string): Alina.ISingleNodeRenderer {
+    return this.mount(this.getQueryComponent()).query(selector);
+  }
+
+  public queryAll(selector: string): Alina.IMultiNodeRenderer {
+    return this.mount(this.getQueryComponent()).queryAll(selector);
+  }
+
+  public getEntries(entry: string): Alina.IMultiNodeRenderer {
+    return this.mount(this.getEntryComponent()).getEntries(entry);
+  }
+
+  public getEntry(entry: string): Alina.ISingleNodeRenderer {
+    return this.mount(this.getEntryComponent()).getEntry(entry);
+  }
+
+  public findNode(entry: string): Alina.ISingleNodeRenderer {
+    return this.mount(this.getFindComponent()).findNode(entry);
+  }
+
+  public findNodes(entry: string): Alina.IMultiNodeRenderer {
+    return this.mount(this.getFindComponent()).findNodes(entry);
+  }
+
+  public set<T>(stub: string, value: T): void {
+    (this.getEntry(stub) as Alina.ISingleNodeRenderer).mount(this.getSetComponent()).set(value);
+  }
+
+  public repeat<T>(templateSelector: string, items: T[], update: (renderer: Renderer, model: T) => void): void {
+    this.query(templateSelector).mount(this.getRepeatComponent()).repeat(items, update);
+  }
+
+  public showIf(templateSelector: string, value: boolean): void {
+    this.query(templateSelector).mount(this.getShowComponent()).showIf(value);
+  }
+
+  public tpl(key?: string): Alina.ITemplateProcessor {
+    return this.mount(this.getTemplateComponent(), key);
   }
 
   protected init(nodesOrBindings: Node[] | Alina.NodeBinding[], parent: Renderer) {

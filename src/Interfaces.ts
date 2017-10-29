@@ -1,6 +1,4 @@
-﻿import * as Alina from "./alina";
-
-export interface ISingleNodeComponent {
+﻿export interface ISingleNodeComponent {
   initialize(context: ISingleNodeRenderer): void;
 }
 
@@ -26,7 +24,7 @@ export interface IBaseRenderer {
   findNodes(entry: string): IMultiNodeRenderer;
   set<T>(stub: string, value: T): void;
   showIf(templateSelector: string, value: boolean): void;
-  tpl(key?: string): Alina.AlTemplate;
+  tpl(key?: string): ITemplateProcessor;
 }
 
 export interface IMultiNodeRenderer extends IBaseRenderer {
@@ -56,6 +54,14 @@ export interface ISingleNodeRenderer extends IBaseRenderer {
   once(callback: (renderer: ISingleNodeRenderer) => void): void;
   repeat<T>(templateSelector: string, items: T[], update: (renderer: ISingleNodeRenderer, model: T) => void): void;
   ext<T>(extension: (renderer: ISingleNodeRenderer) => T): T;
+}
+
+export interface ITemplateProcessor {
+  appendChildren<T>(template: HTMLTemplateElement, render: (renderer: IMultiNodeRenderer) => T | void): T | void;
+  appendChild<T>(template: HTMLTemplateElement, render: (renderer: ISingleNodeRenderer) => T | void): T | void;
+  replaceChildren<T>(template: HTMLTemplateElement, render: (renderer: IMultiNodeRenderer) => T | void): T | void;
+  replaceChild<T>(template: HTMLTemplateElement, render: (renderer: ISingleNodeRenderer) => T | void): T | void;
+  replace<T>(template: HTMLTemplateElement, render: (renderer: ISingleNodeRenderer) => T | void): T | void;
 }
 
 export enum QueryType {
