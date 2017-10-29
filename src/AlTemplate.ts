@@ -69,6 +69,24 @@ export class AlTemplate implements Alina.ISingleNodeComponent {
     }
   }
 
+  replace<T>(template: HTMLTemplateElement, render: (renderer: Alina.ISingleNodeRenderer) => T | void): T | void {
+    if (!this.result) {
+      this.result = this.root.create(this.instantiateTemplateOne(template));
+
+      let ret = render(this.result);
+
+      let parent = this.root.elem.parentElement;
+      if (parent) {
+        parent.replaceChild(this.result.elem, this.root.elem);
+      }
+      this.root.elem = this.result.elem;
+      return ret;
+    } else {
+      return render(this.result as Alina.ISingleNodeRenderer);
+    }
+  }
+
+
   protected instantiateTemplate(templateElem: HTMLTemplateElement): Node[] {
     return templateElem.content ?
       [].map.apply(templateElem.content.children, (node) => node.cloneNode(true))
@@ -77,9 +95,6 @@ export class AlTemplate implements Alina.ISingleNodeComponent {
   }
 
   protected instantiateTemplateOne(templateElem: HTMLTemplateElement): Node {
-    return templateElem.content ?
-      (templateElem.content.firstElementChild || templateElem.content.firstChild).cloneNode(true)
-      :
-      (templateElem.firstElementChild || templateElem.firstChild).cloneNode(true);
+    return Alina.fromTemplate(templateElem);
   }
 }

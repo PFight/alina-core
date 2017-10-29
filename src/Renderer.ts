@@ -97,14 +97,6 @@ export function fromTemplate(templateElem: HTMLTemplateElement): Node {
     (templateElem.firstElementChild || templateElem.firstChild).cloneNode(true);
 }
 
-export function replaceFromTempalte<T extends Node>(elemToReplace: T, templateElem: HTMLTemplateElement): T {
-  let elem = fromTemplate(templateElem);
-  let parent = elemToReplace.parentElement;
-  if (parent) {
-    parent.replaceChild(elem, elemToReplace);
-  }
-  return elem as T;
-}
 
 export function definedNotNull(x) {
   return x !== undefined && x !== null;
