@@ -1,18 +1,16 @@
 {
 	"compilerOptions": {
 		"target": "es5",
-		"module": "umd",
+		"module": "es6",
 		"moduleResolution": "node",
-		"emitDecoratorMetadata": true,
-		"experimentalDecorators": true,
     "noEmitHelpers": false,
     "importHelpers":  false,
-		"lib": [ "es6", "dom" ]
+    "lib": [ "es6", "dom" ],
+    "declaration": false
 	},
-  "include": [
-    "typings/**.*",
-    "*.ts"
-  ],
+    "include": [
+        "src/**/*.ts"
+    ],
 	"exclude": [
 	],
 	"compileOnSave": true
