@@ -1,9 +1,28 @@
-﻿export interface ISingleNodeComponent {
+﻿export interface IComponent {
+}
+
+export interface ISingleNodeComponent extends IComponent  {
   initialize(context: ISingleNodeRenderer): void;
 }
 
-export interface IMultiNodeComponent {
+export class SingleNodeComponent implements ISingleNodeComponent {
+  root: ISingleNodeRenderer;
+
+  initialize(context: ISingleNodeRenderer) {
+    this.root = context;
+  }
+}
+
+export interface IMultiNodeComponent extends IComponent  {
   initialize(context: IMultiNodeRenderer): void;
+}
+
+export class MultiNodeComponent implements IMultiNodeComponent {
+  root: IMultiNodeRenderer;
+
+  initialize(context: IMultiNodeRenderer) {
+    this.root = context;
+  }
 }
 
 export interface ComponentConstructor<ComponentT> {
