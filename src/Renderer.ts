@@ -460,10 +460,13 @@ export class Renderer implements IMultiNodeRenderer, ISingleNodeRenderer {
 
   protected getComponentKey(key: string, component: Function) {
     let result = key || "";
-    if (component["name"]) {
-      result += component["name"];
+    if (component["AlinaComponentName"]) {
+      result += component["AlinaComponentName"];
     } else {
-      result += this.hashCode(component.toString());
+      let name = component["AlinaComponentName"] =
+        (component["name"] || "") + COMPONENT_KEY_COUNTER.toString();
+      COMPONENT_KEY_COUNTER++;
+      result += name;
     }
     return result;
   }
@@ -484,3 +487,5 @@ export var ATTRIBUTE_TO_IDL_MAP: { [attributeName: string]: string } = {
   "class": "className",
   "for": "htmlFor"
 };
+
+var COMPONENT_KEY_COUNTER = 1;
