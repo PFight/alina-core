@@ -1,28 +1,24 @@
 ﻿import * as Alina from "./alina";
 
-export class AlFind implements Alina.IMultiNodeComponent {
-  root: Alina.IMultiNodeRenderer;
-
-  initialize(context: Alina.IMultiNodeRenderer) {
-    this.root = context;
-  }
-
-  public findNode(entry: string): Alina.ISingleNodeRenderer {
+export class AlFind extends Alina.AlinaComponent {
+  public findNode(entry: string): Alina.Alina {
     let context = this.root.getContext(entry, () => {
       let bindings: Alina.NodeBinding[] = [];
-      this.root.bindings.forEach(x => this.findNodesInternal(x.node, entry, bindings, true));
-      return { renderer: this.root.create(bindings[0]) };
+      this.findNodesInternal(this.root.node, entry, bindings, true);
+      return { nodeContext: this.root.create(bindings[0]) };
     });
-    return context.renderer;
+    return context.nodeContext;
   }
 
-  public findNodes(entry: string): Alina.IMultiNodeRenderer {
+  public findNodes(entry: string, render: (context: Alina.NodeContext) => void): void {
     let context = this.root.getContext(entry, () => {
       let bindings: Alina.NodeBinding[] = [];
-      this.root.bindings.forEach(x => this.findNodesInternal(x.node, entry, bindings, false));
-      return { renderer: this.root.createMulti(bindings) };
+      this.findNodesInternal(this.root.node, entry, bindings, false);
+      return { contexts: bindings.map(x => this.root.create(x)) };
     });
-    return context.renderer;
+    for (let c of context.contexts) {
+      render(c);
+    }
   }
 
   protected findNodesInternal(node: Node, query: string, bindings: Alina.NodeBinding[], single: boolean) {

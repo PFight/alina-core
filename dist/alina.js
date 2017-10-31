@@ -4,29 +4,6 @@
 	(factory((global.alina = {})));
 }(this, (function (exports) { 'use strict';
 
-var SingleNodeComponent = (function () {
-    function SingleNodeComponent() {
-    }
-    SingleNodeComponent.prototype.initialize = function (context) {
-        this.root = context;
-    };
-    return SingleNodeComponent;
-}());
-var MultiNodeComponent = (function () {
-    function MultiNodeComponent() {
-    }
-    MultiNodeComponent.prototype.initialize = function (context) {
-        this.root = context;
-    };
-    return MultiNodeComponent;
-}());
-;
-(function (QueryType) {
-    QueryType[QueryType["Node"] = 1] = "Node";
-    QueryType[QueryType["NodeAttribute"] = 2] = "NodeAttribute";
-    QueryType[QueryType["NodeTextContent"] = 3] = "NodeTextContent";
-})(exports.QueryType || (exports.QueryType = {}));
-
 function makeTemplate(str) {
     var elem = document.createElement("template");
     elem.innerHTML = str.trim();
@@ -57,7 +34,175 @@ var ATTRIBUTE_TO_IDL_MAP = {
     "for": "htmlFor"
 };
 
+var NodeContext = (function () {
+    function NodeContext(nodeOrBinding, parent) {
+        this.extensions = [];
+        this.init(nodeOrBinding, parent);
+    }
+    Object.defineProperty(NodeContext.prototype, "elem", {
+        get: function () {
+            return this.node;
+        },
+        set: function (elem) {
+            this.node = elem;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    NodeContext.prototype.nodeAs = function () {
+        return this.node;
+    };
+    Object.defineProperty(NodeContext.prototype, "node", {
+        get: function () {
+            return this.getNode();
+        },
+        set: function (node) {
+            this.setNode(node);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    NodeContext.prototype.create = function (nodeOrBinding) {
+        var inst = new NodeContext(nodeOrBinding, this);
+        for (var _i = 0, _a = this.extensions; _i < _a.length; _i++) {
+            var ext = _a[_i];
+            inst = ext(inst);
+        }
+        return inst;
+    };
+    Object.defineProperty(NodeContext.prototype, "binding", {
+        get: function () {
+            return this._binding;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(NodeContext.prototype, "parent", {
+        get: function () {
+            return this.parentRenderer;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    NodeContext.prototype.getContext = function (key, createContext) {
+        var context = this.context[key];
+        if (!context) {
+            context = this.context[key] = createContext ? createContext() : {};
+        }
+        return context;
+    };
+    NodeContext.prototype.ext = function (createExtension) {
+        var _this = this;
+        var key = this.getKey("", createExtension);
+        var context = this.getContext(key, function () {
+            _this.extensions.push(createExtension);
+            return { extension: createExtension(_this) };
+        });
+        return context.extension;
+    };
+    NodeContext.prototype.mount = function (componentCtor, key) {
+        var _this = this;
+        var componentKey = this.getKey(key, componentCtor);
+        var context = this.getContext(componentKey, function () {
+            var instance = new componentCtor();
+            instance.initialize(_this);
+            return { instance: instance };
+        });
+        return context.instance;
+    };
+    NodeContext.prototype.call = function (component, props, key) {
+        var _this = this;
+        var componentKey = this.getKey(key, component);
+        var context = this.getContext(componentKey, function () { return ({
+            renderer: _this.create(_this.binding)
+        }); });
+        return component(context.renderer, props);
+    };
+    NodeContext.prototype.getKey = function (key, component) {
+        var result = key || "";
+        if (component["AlinaComponentName"]) {
+            result += component["AlinaComponentName"];
+        }
+        else {
+            var name_1 = component["AlinaComponentName"] =
+                (component["name"] || "") + COMPONENT_KEY_COUNTER.toString();
+            COMPONENT_KEY_COUNTER++;
+            result += name_1;
+        }
+        return result;
+    };
+    NodeContext.prototype.init = function (nodeOrBinding, parent) {
+        if (nodeOrBinding.nodeType !== undefined) {
+            this._binding = {
+                node: nodeOrBinding,
+                queryType: exports.QueryType.Node
+            };
+        }
+        else {
+            this._binding = nodeOrBinding;
+        }
+        this.context = {};
+        this.parentRenderer = parent;
+        if (parent) {
+            this.extensions = parent.extensions.slice();
+        }
+    };
+    NodeContext.prototype.getNode = function () {
+        return this._binding.node;
+    };
+    NodeContext.prototype.setNode = function (node) {
+        if (!this._binding) {
+            this._binding = {};
+        }
+        var oldVal = this._binding.node;
+        if (oldVal != node) {
+            this._binding.node = node;
+            this._binding.queryType = exports.QueryType.Node;
+            if (this.parentRenderer && this.parentRenderer.node == oldVal) {
+                this.parentRenderer.node = node;
+            }
+        }
+    };
+    return NodeContext;
+}());
+;
+(function (QueryType) {
+    QueryType[QueryType["Node"] = 1] = "Node";
+    QueryType[QueryType["NodeAttribute"] = 2] = "NodeAttribute";
+    QueryType[QueryType["NodeTextContent"] = 3] = "NodeTextContent";
+})(exports.QueryType || (exports.QueryType = {}));
+var COMPONENT_KEY_COUNTER = 1;
+
+var Component = (function () {
+    function Component() {
+    }
+    Component.prototype.initialize = function (context) {
+        this.root = context;
+    };
+    return Component;
+}());
+
 var __extends = (window && window.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var AlinaComponent = (function (_super) {
+    __extends(AlinaComponent, _super);
+    function AlinaComponent() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    return AlinaComponent;
+}(Component));
+
+var Document = new NodeContext(document, null).ext(StandardExt);
+
+var __extends$1 = (window && window.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
         function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
@@ -70,7 +215,7 @@ var __extends = (window && window.__extends) || (function () {
 var undefinedOrNull$1 = undefinedOrNull;
 var definedNotNull$1 = definedNotNull;
 var AlRepeat = (function (_super) {
-    __extends(AlRepeat, _super);
+    __extends$1(AlRepeat, _super);
     function AlRepeat() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.itemContexts = [];
@@ -137,126 +282,113 @@ var AlRepeat = (function (_super) {
             (definedNotNull$1(a) && definedNotNull$1(b) && comparer && comparer(a, b));
     };
     return AlRepeat;
-}(SingleNodeComponent));
+}(AlinaComponent));
 
-var AlSet = (function () {
-    function AlSet() {
-    }
-    AlSet.prototype.initialize = function (context) {
-        this.root = context;
+var __extends$2 = (window && window.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
+})();
+var AlSet = (function (_super) {
+    __extends$2(AlSet, _super);
+    function AlSet() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
     AlSet.prototype.set = function (value) {
         if (this.lastValue !== value) {
             var preparedValue = value;
-            for (var _i = 0, _a = this.root.bindings; _i < _a.length; _i++) {
-                var binding = _a[_i];
-                // Initial value is stub text (query)
-                var lastValue = this.lastValue !== undefined ? this.lastValue : binding.query;
-                if (binding.queryType == exports.QueryType.NodeAttribute) {
-                    // Class names should be separated with space         
-                    if (binding.attributeName == "class") {
-                        preparedValue = (!value) ? "" : value + " ";
-                    }
-                    // Some attributes has corresponding idl, some doesnt.
-                    if (binding.idlName) {
-                        var currentVal = binding.node[binding.idlName];
-                        if (typeof (currentVal) == "string") {
-                            binding.node[binding.idlName] = currentVal.replace(lastValue, preparedValue);
-                        }
-                        else {
-                            binding.node[binding.idlName] = preparedValue;
-                        }
+            var binding = this.root.binding;
+            // Initial value is stub text (query)
+            var lastValue = this.lastValue !== undefined ? this.lastValue : binding.query;
+            if (binding.queryType == exports.QueryType.NodeAttribute) {
+                // Class names should be separated with space         
+                if (binding.attributeName == "class") {
+                    preparedValue = (!value) ? "" : value + " ";
+                }
+                // Some attributes has corresponding idl, some doesn't.
+                if (binding.idlName) {
+                    var currentVal = binding.node[binding.idlName];
+                    if (typeof (currentVal) == "string") {
+                        binding.node[binding.idlName] = currentVal.replace(lastValue, preparedValue);
                     }
                     else {
-                        var elem = binding.node;
-                        var currentVal = elem.getAttribute(binding.attributeName);
-                        elem.setAttribute(binding.attributeName, currentVal.replace(lastValue, preparedValue));
+                        binding.node[binding.idlName] = preparedValue;
                     }
                 }
                 else {
-                    binding.node.textContent = binding.node.textContent.replace(lastValue, value);
+                    var elem = binding.node;
+                    var currentVal = elem.getAttribute(binding.attributeName);
+                    elem.setAttribute(binding.attributeName, currentVal.replace(lastValue, preparedValue));
                 }
             }
-            
+            else {
+                binding.node.textContent = binding.node.textContent.replace(lastValue, value);
+            }
             this.lastValue = preparedValue;
         }
     };
-    AlSet.prototype.reset = function (value) {
-        if (this.lastValue !== value) {
-            for (var _i = 0, _a = this.root.bindings; _i < _a.length; _i++) {
-                var binding = _a[_i];
-                if (binding.queryType == exports.QueryType.NodeAttribute) {
-                    if (binding.idlName) {
-                        binding.node[binding.idlName] = value;
-                    }
-                    else {
-                        var elem = binding.node;
-                        elem.setAttribute(binding.attributeName, value);
-                    }
-                }
-                else {
-                    binding.node.textContent = value;
-                }
-            }
-            this.lastValue = value;
-        }
-    };
     return AlSet;
-}());
+}(AlinaComponent));
 
-var AlShow = (function () {
-    function AlShow() {
-        this.nodes = [];
-    }
-    AlShow.prototype.initialize = function (context) {
-        this.root = context;
+var __extends$3 = (window && window.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
+})();
+var AlShow = (function (_super) {
+    __extends$3(AlShow, _super);
+    function AlShow() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
     AlShow.prototype.showIf = function (value) {
         if (this.lastValue !== value) {
-            for (var i = 0; i < this.root.bindings.length; i++) {
-                var templateElem = this.root.bindings[i].node;
-                var node = this.nodes[i];
-                if (value) {
-                    if (!node) {
-                        node = this.nodes[i] = fromTemplate(templateElem);
-                    }
-                    if (!node.parentElement) {
-                        templateElem.parentElement.insertBefore(node, templateElem);
-                    }
+            var templateElem = this.root.nodeAs();
+            var node = this.node;
+            if (value) {
+                if (!node) {
+                    node = this.node = fromTemplate(templateElem);
                 }
-                else {
-                    if (node && node.parentElement) {
-                        node.parentElement.removeChild(node);
-                    }
+                if (!node.parentElement) {
+                    templateElem.parentElement.insertBefore(node, templateElem);
+                }
+            }
+            else {
+                if (node && node.parentElement) {
+                    node.parentElement.removeChild(node);
                 }
             }
             this.lastValue = value;
         }
     };
     return AlShow;
-}());
+}(AlinaComponent));
 
-var AlTemplate = (function () {
+var __extends$4 = (window && window.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var AlTemplate = (function (_super) {
+    __extends$4(AlTemplate, _super);
     function AlTemplate() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    AlTemplate.prototype.initialize = function (context) {
-        this.root = context;
-    };
-    AlTemplate.prototype.appendChildren = function (template, render) {
-        if (!this.result) {
-            this.result = this.root.createMulti(this.instantiateTemplate(template));
-            var ret = render(this.result);
-            for (var _i = 0, _a = this.result.nodes; _i < _a.length; _i++) {
-                var node = _a[_i];
-                this.root.elem.appendChild(node);
-            }
-            return ret;
-        }
-        else {
-            return render(this.result);
-        }
-    };
-    AlTemplate.prototype.appendChild = function (template, render) {
+    AlTemplate.prototype.addChild = function (template, render) {
         if (!this.result) {
             this.result = this.root.create(this.instantiateTemplateOne(template));
             var ret = render(this.result);
@@ -267,23 +399,7 @@ var AlTemplate = (function () {
             return render(this.result);
         }
     };
-    AlTemplate.prototype.replaceChildren = function (template, render) {
-        if (!this.result) {
-            this.result = this.root.createMulti(this.instantiateTemplate(template));
-            var ret = render(this.result);
-            var rootElem = this.root.elem;
-            rootElem.innerHTML = "";
-            for (var _i = 0, _a = this.result.nodes; _i < _a.length; _i++) {
-                var node = _a[_i];
-                rootElem.appendChild(node);
-            }
-            return ret;
-        }
-        else {
-            return render(this.result);
-        }
-    };
-    AlTemplate.prototype.replaceChild = function (template, render) {
+    AlTemplate.prototype.setChild = function (template, render) {
         if (!this.result) {
             this.result = this.root.create(this.instantiateTemplateOne(template));
             var ret = render(this.result);
@@ -310,24 +426,33 @@ var AlTemplate = (function () {
             return render(this.result);
         }
     };
-    AlTemplate.prototype.instantiateTemplate = function (templateElem) {
-        return templateElem.content ?
-            [].map.apply(templateElem.content.children, function (node) { return node.cloneNode(true); })
-            :
-                [].map.apply(templateElem.children, function (node) { return node.cloneNode(true); });
-    };
+    //protected instantiateTemplate(templateElem: HTMLTemplateElement): Node[] {
+    //  return templateElem.content ?
+    //    [].map.call(templateElem.content.children, (node) => node.cloneNode(true))
+    //    :
+    //    [].map.call(templateElem.children, (node) => node.cloneNode(true))
+    //}
     AlTemplate.prototype.instantiateTemplateOne = function (templateElem) {
         return fromTemplate(templateElem);
     };
     return AlTemplate;
-}());
+}(AlinaComponent));
 
-var AlQuery = (function () {
-    function AlQuery() {
-    }
-    AlQuery.prototype.initialize = function (context) {
-        this.root = context;
+var __extends$5 = (window && window.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
+})();
+var AlQuery = (function (_super) {
+    __extends$5(AlQuery, _super);
+    function AlQuery() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
     AlQuery.prototype.query = function (selector) {
         var _this = this;
         var context = this.root.getContext(selector, function () { return ({
@@ -335,73 +460,83 @@ var AlQuery = (function () {
         }); });
         return context.result;
     };
-    AlQuery.prototype.queryAll = function (selector) {
+    AlQuery.prototype.queryAll = function (selector, render) {
         var _this = this;
         var context = this.root.getContext(selector, function () { return ({
-            result: _this.root.createMulti(_this.querySelectorAllInternal(selector).map(function (x) { return ({
+            contexts: _this.querySelectorAllInternal(selector).map(function (x) { return _this.root.create({
                 node: x,
                 queryType: exports.QueryType.Node,
                 query: selector
-            }); }))
+            }); })
         }); });
-        return context.result;
+        for (var _i = 0, _a = context.contexts; _i < _a.length; _i++) {
+            var c = _a[_i];
+            render(c);
+        }
     };
     AlQuery.prototype.querySelectorInternal = function (selector) {
         var result;
-        for (var i = 0; i < this.root.bindings.length && !result; i++) {
-            var node = this.root.bindings[i].node;
-            if (node.nodeType == Node.ELEMENT_NODE) {
-                var elem = node;
-                if (elem.matches(selector)) {
-                    result = elem;
-                }
-                else {
-                    result = elem.querySelector(selector);
-                }
+        if (this.root.node.nodeType == Node.ELEMENT_NODE) {
+            var elem = this.root.node;
+            if (elem.matches(selector)) {
+                result = elem;
+            }
+            else {
+                result = elem.querySelector(selector);
             }
         }
         return result;
     };
     AlQuery.prototype.querySelectorAllInternal = function (selector) {
         var result = [];
-        for (var i = 0; i < this.root.bindings.length && !result; i++) {
-            var node = this.root.bindings[i].node;
-            if (node.nodeType == Node.ELEMENT_NODE) {
-                var elem = node;
-                if (elem.matches(selector)) {
-                    result.push(elem);
-                }
-                result = result.concat(elem.querySelectorAll(selector));
+        var node = this.root.node;
+        if (node.nodeType == Node.ELEMENT_NODE) {
+            var elem = node;
+            if (elem.matches(selector)) {
+                result.push(elem);
             }
+            result = result.concat(elem.querySelectorAll(selector));
         }
         return result;
     };
     return AlQuery;
-}());
+}(AlinaComponent));
 
-var AlEntry = (function () {
-    function AlEntry() {
-    }
-    AlEntry.prototype.initialize = function (context) {
-        this.root = context;
+var __extends$6 = (window && window.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
-    AlEntry.prototype.getEntries = function (entry) {
+})();
+var AlEntry = (function (_super) {
+    __extends$6(AlEntry, _super);
+    function AlEntry() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    AlEntry.prototype.getEntries = function (entry, render) {
         var _this = this;
         var context = this.root.getContext(entry, function () {
             var bindings = [];
-            _this.root.bindings.forEach(function (x) { return _this.getEntiresInternal(x.node, entry, bindings, false); });
-            return { renderer: _this.root.createMulti(bindings) };
+            _this.getEntiresInternal(_this.root.node, entry, bindings, false);
+            return { contexts: bindings.map(function (x) { return _this.root.create(x); }) };
         });
-        return context.renderer;
+        for (var _i = 0, _a = context.contexts; _i < _a.length; _i++) {
+            var c = _a[_i];
+            render(c);
+        }
     };
     AlEntry.prototype.getEntry = function (entry) {
         var _this = this;
         var context = this.root.getContext(entry, function () {
             var bindings = [];
-            _this.root.bindings.forEach(function (x) { return _this.getEntiresInternal(x.node, entry, bindings, true); });
-            return { renderer: _this.root.create(bindings[0]) };
+            _this.getEntiresInternal(_this.root.node, entry, bindings, true);
+            return { nodeContext: _this.root.create(bindings[0]) };
         });
-        return context.renderer;
+        return context.nodeContext;
     };
     AlEntry.prototype.getEntiresInternal = function (node, query, bindings, single, queryType) {
         if (queryType === undefined || queryType == exports.QueryType.NodeTextContent) {
@@ -459,31 +594,43 @@ var AlEntry = (function () {
         }
     };
     return AlEntry;
-}());
+}(AlinaComponent));
 
-var AlFind = (function () {
-    function AlFind() {
-    }
-    AlFind.prototype.initialize = function (context) {
-        this.root = context;
+var __extends$7 = (window && window.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
+})();
+var AlFind = (function (_super) {
+    __extends$7(AlFind, _super);
+    function AlFind() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
     AlFind.prototype.findNode = function (entry) {
         var _this = this;
         var context = this.root.getContext(entry, function () {
             var bindings = [];
-            _this.root.bindings.forEach(function (x) { return _this.findNodesInternal(x.node, entry, bindings, true); });
-            return { renderer: _this.root.create(bindings[0]) };
+            _this.findNodesInternal(_this.root.node, entry, bindings, true);
+            return { nodeContext: _this.root.create(bindings[0]) };
         });
-        return context.renderer;
+        return context.nodeContext;
     };
-    AlFind.prototype.findNodes = function (entry) {
+    AlFind.prototype.findNodes = function (entry, render) {
         var _this = this;
         var context = this.root.getContext(entry, function () {
             var bindings = [];
-            _this.root.bindings.forEach(function (x) { return _this.findNodesInternal(x.node, entry, bindings, false); });
-            return { renderer: _this.root.createMulti(bindings) };
+            _this.findNodesInternal(_this.root.node, entry, bindings, false);
+            return { contexts: bindings.map(function (x) { return _this.root.create(x); }) };
         });
-        return context.renderer;
+        for (var _i = 0, _a = context.contexts; _i < _a.length; _i++) {
+            var c = _a[_i];
+            render(c);
+        }
     };
     AlFind.prototype.findNodesInternal = function (node, query, bindings, single) {
         var found = false;
@@ -516,7 +663,7 @@ var AlFind = (function () {
         }
     };
     return AlFind;
-}());
+}(AlinaComponent));
 
 var Slot = (function () {
     function Slot(component) {
@@ -529,241 +676,80 @@ var Slot = (function () {
     return Slot;
 }());
 
-var Renderer = (function () {
-    function Renderer(nodesOrBindings, parent) {
-        this.init(nodesOrBindings, parent);
+function StandardExt(renderer) {
+    var result = renderer;
+    result.query = query;
+    result.queryAll = queryAll;
+    result.getEntry = getEntry;
+    result.getEntries = getEntries;
+    result.findNode = findNode;
+    result.findNodes = findNodes;
+    result.set = set;
+    result.showIf = showIf;
+    result.tpl = tpl;
+    result.repeat = repeat;
+    result.on = on;
+    result.once = once;
+    return result;
+}
+function on(value, callback, key) {
+    var context = this.getContext(this.getKey(key, on));
+    if (context.lastValue !== value) {
+        var result = callback(this, value, context.lastValue);
+        context.lastValue = result !== undefined ? result : value;
     }
-    Renderer.prototype.getSetComponent = function () {
-        return AlSet;
-    };
-    Renderer.prototype.getRepeatComponent = function () {
-        return AlRepeat;
-    };
-    Renderer.prototype.getTemplateComponent = function () {
-        return AlTemplate;
-    };
-    Renderer.prototype.getQueryComponent = function () {
-        return AlQuery;
-    };
-    Renderer.prototype.getFindComponent = function () {
-        return AlFind;
-    };
-    Renderer.prototype.getEntryComponent = function () {
-        return AlEntry;
-    };
-    Renderer.prototype.getShowComponent = function () {
-        return AlShow;
-    };
-    Renderer.Create = function (nodeOrBinding) {
-        return Renderer.Main.create(nodeOrBinding);
-    };
-    Renderer.CreateMulti = function (nodesOrBindings) {
-        return Renderer.Main.createMulti(nodesOrBindings);
-    };
-    Object.defineProperty(Renderer.prototype, "nodes", {
-        get: function () {
-            return this._bindings.map(function (x) { return x.node; });
-        },
-        enumerable: true,
-        configurable: true
+}
+function once(callback) {
+    var context = this.getContext(this.getKey("", once));
+    if (!context) {
+        callback(this);
+    }
+}
+function query(selector) {
+    return this.mount(AlQuery).query(selector);
+}
+function queryAll(selector, render) {
+    this.mount(AlQuery).queryAll(selector, render);
+}
+function getEntries(entry, render) {
+    return this.mount(AlEntry).getEntries(entry, render);
+}
+function getEntry(entry) {
+    return this.mount(AlEntry).getEntry(entry);
+}
+function findNode(entry) {
+    return this.mount(AlFind).findNode(entry);
+}
+function findNodes(entry, render) {
+    return this.mount(AlFind).findNodes(entry, render);
+}
+function set(stub, value) {
+    this.mount(AlEntry).getEntries(stub, function (context) {
+        context.mount(AlSet).set(value);
     });
-    Object.defineProperty(Renderer.prototype, "bindings", {
-        get: function () {
-            return this._bindings;
-        },
-        set: function (bindings) {
-            this._bindings = bindings;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Renderer.prototype, "elem", {
-        get: function () {
-            return this.node;
-        },
-        set: function (elem) {
-            this.node = elem;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Renderer.prototype.nodeAs = function () {
-        return this.node;
-    };
-    Object.defineProperty(Renderer.prototype, "node", {
-        get: function () {
-            return this.getNode();
-        },
-        set: function (node) {
-            this.setNode(node);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Renderer.prototype.create = function (nodeOrBinding) {
-        return new Renderer([nodeOrBinding], this);
-    };
-    Renderer.prototype.createMulti = function (nodesOrBindings) {
-        return new Renderer(nodesOrBindings, this);
-    };
-    Object.defineProperty(Renderer.prototype, "binding", {
-        get: function () {
-            return this._bindings[0];
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Renderer.prototype, "parent", {
-        get: function () {
-            return this.parentRenderer;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Renderer.prototype.getContext = function (key, createContext) {
-        var context = this.context[key];
-        if (!context) {
-            context = this.context[key] = createContext ? createContext() : {};
-        }
-        return context;
-    };
-    Renderer.prototype.on = function (value, callback, key) {
-        var lastValue = key ? this.context[key] : this.onLastValue;
-        if (this.onLastValue !== value) {
-            var result = callback(this, value, this.onLastValue);
-            var lastValue_1 = result !== undefined ? result : value;
-            if (key) {
-                this.context[key] = lastValue_1;
-            }
-            else {
-                this.onLastValue = lastValue_1;
-            }
-        }
-    };
-    Renderer.prototype.once = function (callback) {
-        if (!this.onceFlag) {
-            this.onceFlag = true;
-            callback(this);
-        }
-    };
-    Renderer.prototype.ext = function (createExtension) {
-        var key = this.getComponentKey("", createExtension);
-        var context = this.getContext(key);
-        if (!context.extension) {
-            context.extension = createExtension(this);
-        }
-        return context.extension;
-    };
-    Renderer.prototype.mount = function (componentCtor, key) {
-        var _this = this;
-        var componentKey = this.getComponentKey(key, componentCtor);
-        var context = this.getContext(componentKey, function () {
-            var instance = new componentCtor();
-            instance.initialize(_this);
-            return { instance: instance };
-        });
-        return context.instance;
-    };
-    Renderer.prototype.call = function (component, props, key) {
-        var _this = this;
-        var componentKey = this.getComponentKey(key, component);
-        var context = this.getContext(componentKey, function () { return ({
-            renderer: _this.createMulti(_this.bindings)
-        }); });
-        return component(context.renderer, props);
-    };
-    Renderer.prototype.query = function (selector) {
-        return this.mount(this.getQueryComponent()).query(selector);
-    };
-    Renderer.prototype.queryAll = function (selector) {
-        return this.mount(this.getQueryComponent()).queryAll(selector);
-    };
-    Renderer.prototype.getEntries = function (entry) {
-        return this.mount(this.getEntryComponent()).getEntries(entry);
-    };
-    Renderer.prototype.getEntry = function (entry) {
-        return this.mount(this.getEntryComponent()).getEntry(entry);
-    };
-    Renderer.prototype.findNode = function (entry) {
-        return this.mount(this.getFindComponent()).findNode(entry);
-    };
-    Renderer.prototype.findNodes = function (entry) {
-        return this.mount(this.getFindComponent()).findNodes(entry);
-    };
-    Renderer.prototype.set = function (stub, value) {
-        this.getEntry(stub).mount(this.getSetComponent()).set(value);
-    };
-    Renderer.prototype.repeat = function (templateSelector, items, update) {
-        this.query(templateSelector).mount(this.getRepeatComponent()).repeat(items, update);
-    };
-    Renderer.prototype.showIf = function (templateSelector, value) {
-        this.query(templateSelector).mount(this.getShowComponent()).showIf(value);
-    };
-    Renderer.prototype.tpl = function (key) {
-        return this.mount(this.getTemplateComponent(), key);
-    };
-    Renderer.prototype.init = function (nodesOrBindings, parent) {
-        if (nodesOrBindings.length > 0) {
-            var first = nodesOrBindings[0];
-            if (first.nodeType !== undefined) {
-                this._bindings = nodesOrBindings.map(function (x) { return ({
-                    node: x,
-                    queryType: exports.QueryType.Node
-                }); });
-            }
-            else {
-                this._bindings = nodesOrBindings;
-            }
-        }
-        else {
-            this._bindings = [];
-        }
-        this.context = {};
-        this.parentRenderer = parent;
-    };
-    Renderer.prototype.getNode = function () {
-        return this._bindings.length > 0 && this._bindings[0].node || null;
-    };
-    Renderer.prototype.setNode = function (node) {
-        var binding = this._bindings[0];
-        if (!binding) {
-            binding = this._bindings[0] = {};
-        }
-        var oldVal = binding.node;
-        if (oldVal != node) {
-            binding.node = node;
-            binding.queryType = exports.QueryType.Node;
-            if (this.parentRenderer && this.parentRenderer.node == oldVal) {
-                this.parentRenderer.node = node;
-            }
-        }
-    };
-    Renderer.prototype.getComponentKey = function (key, component) {
-        var result = key || "";
-        if (component["AlinaComponentName"]) {
-            result += component["AlinaComponentName"];
-        }
-        else {
-            var name_1 = component["AlinaComponentName"] =
-                (component["name"] || "") + COMPONENT_KEY_COUNTER.toString();
-            COMPONENT_KEY_COUNTER++;
-            result += name_1;
-        }
-        return result;
-    };
-    Renderer.Main = new Renderer([document.body], null);
-    return Renderer;
-}());
-var COMPONENT_KEY_COUNTER = 1;
+}
+function repeat(templateSelector, items, update) {
+    this.mount(AlQuery).query(templateSelector)
+        .mount(AlRepeat).repeat(items, update);
+}
+function showIf(templateSelector, value) {
+    this.mount(AlQuery).query(templateSelector)
+        .mount(AlShow).showIf(value);
+}
+function tpl(key) {
+    return this.mount(AlTemplate, key);
+}
 
-exports.SingleNodeComponent = SingleNodeComponent;
-exports.MultiNodeComponent = MultiNodeComponent;
 exports.makeTemplate = makeTemplate;
 exports.fromTemplate = fromTemplate;
 exports.definedNotNull = definedNotNull;
 exports.undefinedOrNull = undefinedOrNull;
 exports.getIdlName = getIdlName;
 exports.ATTRIBUTE_TO_IDL_MAP = ATTRIBUTE_TO_IDL_MAP;
+exports.NodeContext = NodeContext;
+exports.Component = Component;
+exports.AlinaComponent = AlinaComponent;
+exports.Document = Document;
 exports.AlRepeat = AlRepeat;
 exports.AlSet = AlSet;
 exports.AlShow = AlShow;
@@ -772,7 +758,7 @@ exports.AlQuery = AlQuery;
 exports.AlEntry = AlEntry;
 exports.AlFind = AlFind;
 exports.Slot = Slot;
-exports.Renderer = Renderer;
+exports.StandardExt = StandardExt;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 

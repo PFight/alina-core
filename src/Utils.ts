@@ -12,7 +12,6 @@ export function fromTemplate(templateElem: HTMLTemplateElement): Node {
     (templateElem.firstElementChild || templateElem.firstChild).cloneNode(true);
 }
 
-
 export function definedNotNull(x) {
   return x !== undefined && x !== null;
 }
@@ -20,7 +19,6 @@ export function definedNotNull(x) {
 export function undefinedOrNull(x) {
   return x === undefined || x === null;
 }
-
 
 export function getIdlName(attr: Attr, node: Node) {
   let idlName = ATTRIBUTE_TO_IDL_MAP[attr.name] || attr.name;
@@ -34,3 +32,7 @@ export var ATTRIBUTE_TO_IDL_MAP: { [attributeName: string]: string } = {
   "class": "className",
   "for": "htmlFor"
 };
+
+export interface Ctor<ComponentT> {
+  new(): ComponentT;
+}

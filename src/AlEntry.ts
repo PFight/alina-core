@@ -1,28 +1,25 @@
 ﻿import * as Alina from "./alina";
 
-export class AlEntry implements Alina.IMultiNodeComponent {
-  root: Alina.IMultiNodeRenderer;
+export class AlEntry extends Alina.AlinaComponent {
 
-  initialize(context: Alina.IMultiNodeRenderer) {
-    this.root = context;
-  }
-
-  public getEntries(entry: string): Alina.IMultiNodeRenderer {
+  public getEntries(entry: string, render: (context: Alina.Alina) => void): void {
     let context = this.root.getContext(entry, () => {
       let bindings: Alina.NodeBinding[] = [];
-      this.root.bindings.forEach(x => this.getEntiresInternal(x.node, entry, bindings, false));
-      return { renderer: this.root.createMulti(bindings) };
+      this.getEntiresInternal(this.root.node, entry, bindings, false);
+      return { contexts: bindings.map(x => this.root.create(x)) };
     });
-    return context.renderer;
+    for (let c of context.contexts) {
+      render(c);
+    }
   }
 
-  public getEntry(entry: string): Alina.ISingleNodeRenderer {
+  public getEntry(entry: string): Alina.Alina {
     let context = this.root.getContext(entry, () => {
       let bindings: Alina.NodeBinding[] = [];
-      this.root.bindings.forEach(x => this.getEntiresInternal(x.node, entry, bindings, true));
-      return { renderer: this.root.create(bindings[0]) };
+      this.getEntiresInternal(this.root.node, entry, bindings, true);
+      return { nodeContext: this.root.create(bindings[0]) };
     });
-    return context.renderer;
+    return context.nodeContext;
   }
 
   protected getEntiresInternal(

@@ -29,12 +29,20 @@
     <Content Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="src\Renderer.ts" />
+    <TypeScriptCompile Include="src\AlEntry.ts" />
+    <TypeScriptCompile Include="src\AlFind.ts" />
+    <TypeScriptCompile Include="src\AlQuery.ts" />
     <TypeScriptCompile Include="src\AlRepeat.ts" />
     <TypeScriptCompile Include="src\AlSet.ts" />
     <TypeScriptCompile Include="src\AlShow.ts" />
     <TypeScriptCompile Include="src\AlTemplate.ts" />
     <TypeScriptCompile Include="src\alina.ts" />
+    <TypeScriptCompile Include="src\Component.ts" />
+    <TypeScriptCompile Include="src\Main.ts" />
+    <TypeScriptCompile Include="src\NodeContext.ts" />
+    <TypeScriptCompile Include="src\Slot.ts" />
+    <TypeScriptCompile Include="src\StandardExtensions.ts" />
+    <TypeScriptCompile Include="src\Utils.ts" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="tsconfig.dts.json" />

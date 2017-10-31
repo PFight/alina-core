@@ -1,30 +1,9 @@
 ﻿import * as Alina from "./alina";
 
-export class AlTemplate implements Alina.ISingleNodeComponent, Alina.ITemplateProcessor {
-  root: Alina.ISingleNodeRenderer;
-  result: Alina.IMultiNodeRenderer | Alina.ISingleNodeRenderer;
+export class AlTemplate extends Alina.AlinaComponent implements Alina.ITemplateProcessor<Alina.Alina> {
+  result: Alina.Alina;
 
-  initialize(context: Alina.ISingleNodeRenderer) {
-    this.root = context;
-  }
-
-  appendChildren<T>(template: HTMLTemplateElement, render: (renderer: Alina.IMultiNodeRenderer) => T | void): T | void {
-    if (!this.result) {
-      this.result = this.root.createMulti(this.instantiateTemplate(template));
-
-      let ret = render(this.result);
-
-      for (let node of this.result.nodes) {
-        this.root.elem.appendChild(node);
-      }
-
-      return ret;
-    } else {
-      return render(this.result as Alina.IMultiNodeRenderer);
-    }
-  }
-
-  appendChild<T>(template: HTMLTemplateElement, render: (renderer: Alina.ISingleNodeRenderer) => T | void): T | void {
+  addChild<T>(template: HTMLTemplateElement, render: (renderer: Alina.Alina) => T | void): T | void {
     if (!this.result) {
       this.result = this.root.create(this.instantiateTemplateOne(template));
 
@@ -33,29 +12,12 @@ export class AlTemplate implements Alina.ISingleNodeComponent, Alina.ITemplatePr
       this.root.elem.appendChild(this.result.node);
       return ret;
     } else {
-      return render(this.result as Alina.ISingleNodeRenderer);
+      return render(this.result);
     }
   }
 
-  replaceChildren<T>(template: HTMLTemplateElement, render: (renderer: Alina.IMultiNodeRenderer) => T | void): T | void {
-    if (!this.result) {
-      this.result = this.root.createMulti(this.instantiateTemplate(template));
 
-      let ret = render(this.result);
-
-      let rootElem = this.root.elem;
-      rootElem.innerHTML = "";
-      for (let node of this.result.nodes) {
-        rootElem.appendChild(node);
-      }
-
-      return ret;
-    } else {
-      return render(this.result as Alina.IMultiNodeRenderer);
-    }
-  }
-
-  replaceChild<T>(template: HTMLTemplateElement, render: (renderer: Alina.ISingleNodeRenderer) => T | void): T | void {
+  setChild<T>(template: HTMLTemplateElement, render: (renderer: Alina.Alina) => T | void): T | void {
     if (!this.result) {
       this.result = this.root.create(this.instantiateTemplateOne(template));
 
@@ -65,11 +27,11 @@ export class AlTemplate implements Alina.ISingleNodeComponent, Alina.ITemplatePr
       this.root.elem.appendChild(this.result.node);
       return ret;
     } else {
-      return render(this.result as Alina.ISingleNodeRenderer);
+      return render(this.result);
     }
   }
 
-  replace<T>(template: HTMLTemplateElement, render: (renderer: Alina.ISingleNodeRenderer) => T | void): T | void {
+  replace<T>(template: HTMLTemplateElement, render: (renderer: Alina.Alina) => T | void): T | void {
     if (!this.result) {
       this.result = this.root.create(this.instantiateTemplateOne(template));
 
@@ -82,17 +44,16 @@ export class AlTemplate implements Alina.ISingleNodeComponent, Alina.ITemplatePr
       this.root.elem = this.result.elem;
       return ret;
     } else {
-      return render(this.result as Alina.ISingleNodeRenderer);
+      return render(this.result as Alina.Alina);
     }
   }
 
-
-  protected instantiateTemplate(templateElem: HTMLTemplateElement): Node[] {
-    return templateElem.content ?
-      [].map.apply(templateElem.content.children, (node) => node.cloneNode(true))
-      :
-      [].map.apply(templateElem.children, (node) => node.cloneNode(true))
-  }
+  //protected instantiateTemplate(templateElem: HTMLTemplateElement): Node[] {
+  //  return templateElem.content ?
+  //    [].map.call(templateElem.content.children, (node) => node.cloneNode(true))
+  //    :
+  //    [].map.call(templateElem.children, (node) => node.cloneNode(true))
+  //}
 
   protected instantiateTemplateOne(templateElem: HTMLTemplateElement): Node {
     return Alina.fromTemplate(templateElem);

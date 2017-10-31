@@ -9,7 +9,7 @@ export interface RepeatExtraOptions<T> {
 export interface RepeatItemContext<T> {
   oldModelItem?: T;
   mounted?: boolean;
-  renderer?: Alina.ISingleNodeRenderer;
+  renderer?: Alina.Alina;
 }
 
 export interface AlRepeatContext<T> {
@@ -17,14 +17,14 @@ export interface AlRepeatContext<T> {
   insertBefore: HTMLElement | null;
   container: HTMLElement;
   equals?: (a: T, b: T) => boolean;
-  update: (renderer: Alina.ISingleNodeRenderer, model: T) => void;
+  update: (renderer: Alina.Alina, model: T) => void;
 }
 
-export class AlRepeat extends Alina.SingleNodeComponent {
+export class AlRepeat extends Alina.AlinaComponent {
   itemContexts: RepeatItemContext<any>[] = [];
   context: AlRepeatContext<any>;
 
-  repeat<T>(items: T[], update: (renderer: Alina.Renderer, model: T) => void, options?: RepeatExtraOptions<T>) {
+  repeat<T>(items: T[], update: (renderer: Alina.Alina, model: T) => void, options?: RepeatExtraOptions<T>) {
     if (update) {
       this.context = {
         template: this.root.elem as HTMLTemplateElement,
