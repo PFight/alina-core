@@ -8,7 +8,7 @@ export interface StandardExtensions {
   findNode(entry: string): this;
   findNodes(entry: string, render: (context: this) => void): void;
   set<T>(stub: string, value: T): void;
-  showIf(templateSelector: string, value: boolean): void;
+  showIf(templateSelector: string, value: boolean, render?: (context: this) => void): void;
   tpl(key?: string): ITemplateProcessor<this>;
   repeat<T>(templateSelector: string, items: T[], update: (renderer: this, model: T) => void): void;
   on<T>(value: T, callback: (renderer: this, value?: T, prevValue?: T) => T | void, key?: string): void;
@@ -41,7 +41,7 @@ export function StandardExt<T extends Alina.NodeContext>(renderer: T): T & Stand
 }
 
 function on<T>(this: Alina.NodeContext, value: T, callback: (renderer, value?: T, prevValue?: T) => T | void, key?: string): void {
-  let context = this.getContext<Record<'lastValue', T>>(this.getKey(key, on));
+  let context = this.getComponentContext<Record<'lastValue', T>>(on, key);
   if (context.lastValue !== value) {
     let result = callback(this, value, context.lastValue) as T;
     context.lastValue = result !== undefined ? result : value;
@@ -49,7 +49,7 @@ function on<T>(this: Alina.NodeContext, value: T, callback: (renderer, value?: T
 }
 
 function once(this: Alina.NodeContext, callback: (renderer) => void): void {
-  let context = this.getContext(this.getKey("", once), () => ({ first: true }));
+  let context = this.getComponentContext(once, "", () => ({ first: true }));
   if(context.first) {
     callback(this);
     context.first = false;
@@ -91,9 +91,9 @@ function repeat<T>(this: Alina.Alina, templateSelector: string, items: T[], upda
     .mount(Alina.AlRepeat).repeat(items, update);
 }
 
-function showIf(this: Alina.Alina, templateSelector: string, value: boolean): void {
+function showIf(this: Alina.Alina, templateSelector: string, value: boolean, render?: (context) => void): void {
   this.mount(Alina.AlQuery).query(templateSelector)
-    .mount(Alina.AlShow).showIf(value);
+    .mount(Alina.AlShow).showIf(value, render);
 }
 
 function tpl(this: Alina.Alina, key?: string): any {

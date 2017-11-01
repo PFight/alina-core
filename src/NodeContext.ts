@@ -1,20 +1,22 @@
 import * as Alina from "./alina";
 
 export class NodeContext {
-  protected context: { [key: string]: any };
-  protected parentRenderer: NodeContext;
+  protected componentsContext: { [key: string]: any };
+  protected _parent: NodeContext;
   protected _binding: Alina.NodeBinding;
-  protected extensions: ((renderer: Alina.NodeContext) => Alina.NodeContext)[] = [];
+  protected extensions: { [key: string]: (renderer: Alina.NodeContext) => Alina.NodeContext } = {};
+  protected children: NodeContext[] = [];
+  protected disposeListeners: ((context: Alina.NodeContext) => void)[] = []; 
   
   constructor(nodeOrBinding: Node | Alina.NodeBinding, parent: NodeContext) {
     this.init(nodeOrBinding, parent);
   }
 
   public get elem(): HTMLElement {
-    return this.node as HTMLElement;
+    return this.getNode() as HTMLElement;
   }
   public set elem(elem: HTMLElement) {
-    this.node = elem;
+    this.setNode(elem);
   }
 
   public nodeAs<T extends Node>() {
@@ -31,9 +33,6 @@ export class NodeContext {
 
   public create(nodeOrBinding: Node | Alina.NodeBinding): this {
     let inst = new NodeContext(nodeOrBinding, this);
-    for (let ext of this.extensions) {
-      inst = ext(inst);
-    }
     return inst as this;
   }
 
@@ -42,24 +41,31 @@ export class NodeContext {
   }
 
   public get parent(): NodeContext {
-    return this.parentRenderer;
+    return this._parent;
   }
 
-  public getContext<T>(key: string, createContext?: () => T): T {
-    let context = this.context[key];
+  public getComponentContext<T>(component: Function, additionalKey: string, createContext?: () => T): T {
+    let key = this.getComponentKey(additionalKey, component);
+    let context = this.componentsContext[key];
     if (!context) {
-      context = this.context[key] = createContext ? createContext() : {};
+      context = this.componentsContext[key] = createContext ? createContext() : {};
     }
     return context as T;
   }
 
-  public ext<T>(createExtension: (renderer: this) => T): T {
-    let key = this.getKey("", createExtension);
-    let context = this.getContext(key, () => {
-      this.extensions.push(createExtension as any);
-      return { extension: createExtension(this) };
-    });
-    return context.extension;
+  public clearComponentContext(component: Function, additionalKey: string) {
+    let key = this.getComponentKey(additionalKey, component);
+    delete this.componentsContext[key];
+  }
+
+  public ext<T extends Alina.NodeContext>(extension: (renderer: this) => T): T {
+    let key = this.getComponentKey("", extension);
+    let ext = this.extensions[key];
+    if (!ext) {
+      extension(this);
+      this.extensions[key] = extension as any;
+    }
+    return this as any;
   }
 
   public mount<ComponentT extends Alina.Component<ContextT>, ContextT extends NodeContext, ServicesT>(this: ContextT,
@@ -67,27 +73,66 @@ export class NodeContext {
     services?: ServicesT,
     key?: string): ComponentT
   {
-    let componentKey = this.getKey(key, componentCtor);
-    let context = this.getContext(componentKey, () => {
-      let instance = new componentCtor(this, services);
-      return { instance };
+    let context = this.getComponentContext<IComponentContext>(componentCtor, key, () => {
+      let context = this.create(this.binding);
+      let instance = new componentCtor(context, services);
+      instance.init();
+      return { instance: instance as any, context: context as any} as IComponentContext;
     });
-    return context.instance;
+    return context.instance as any;
   }
-
+  
   public call<PropsT, RetT>(this: this,
     component: Alina.FuncComponent<this, PropsT, RetT>,
     props: PropsT,
     key?: string): RetT {
-    let componentKey = this.getKey(key, component);
-    let context = this.getContext(componentKey, () => ({
-      renderer: this.create(this.binding)
+    let context = this.getComponentContext<IComponentContext>(component, key, () => ({
+      context: this.create(this.binding)
     }));
-    return component(context.renderer, props);
+    return component(context.context as any, props);
   }
 
+  public unmount<ComponentT extends Function>(component: ComponentT, key?: string): void {
+    let context = this.getComponentContext<IComponentContext>(component, key);
+    if (context.context) {
+      context.context.dispose();
+    }
+    this.clearComponentContext(component, key);
+  }
 
-  public getKey(key: string, component: Function) {
+  public unmountAll() {
+    let children = [...this.children];
+    for (let c of children) {
+      c.dispose();
+    }
+    this.componentsContext = {};
+  }
+
+  public addDisposeListener(callback: (context: this) => void) {
+    this.disposeListeners.push(callback as any);
+  }
+
+  public removeDisposeListener(callback: (context: this) => void) {
+    let index = this.disposeListeners.indexOf(callback as any);
+    if (index >= 0) {
+      this.disposeListeners.splice(index, 1);
+    }
+  }
+
+  public dispose() {
+    for (let listener of this.disposeListeners) {
+      listener(this);
+    }
+    let children = [...this.children];
+    for (let child of children) {
+      child.dispose();
+    }
+    if (this.parent) {
+      this.parent.children.splice(this.parent.children.indexOf(this), 1);
+    }
+  }
+
+  protected getComponentKey(key: string, component: Function) {
     let result = key || "";
     if (component["AlinaComponentName"]) {
       result += component["AlinaComponentName"];
@@ -107,15 +152,19 @@ export class NodeContext {
         queryType: Alina.QueryType.Node
       };
     } else {
-      this._binding = nodeOrBinding as Alina.NodeBinding;
-    }    
-    this.context = {};
-    this.parentRenderer = parent;
+      this._binding = { ...nodeOrBinding as Alina.NodeBinding };
+    }
+    this.componentsContext = {};
+    this._parent = parent;
     if (parent) {
-      this.extensions = [...parent.extensions];
+      this.extensions = { ...parent.extensions };
+      for (let extKey in this.extensions) {
+        this.extensions[extKey](this);
+      }
+      parent.children.push(this);
     }
   }
-
+  
   protected getNode(): Node {
     return this._binding.node;
   }
@@ -129,8 +178,8 @@ export class NodeContext {
       this._binding.node = node;
       this._binding.queryType = Alina.QueryType.Node;
 
-      if (this.parentRenderer && this.parentRenderer.node == oldVal) {
-        this.parentRenderer.node = node;
+      if (this._parent && this._parent.node == oldVal) {
+        this._parent.node = node;
       }
     }
   }
@@ -148,6 +197,11 @@ export interface NodeBinding {
   query?: string;
   attributeName?: string;
   idlName?: string;
+}
+
+interface IComponentContext {
+  context: Alina.NodeContext;
+  instance?: Function;
 }
 
 var COMPONENT_KEY_COUNTER = 1;

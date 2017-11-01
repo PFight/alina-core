@@ -9,7 +9,7 @@ export interface RepeatExtraOptions<T> {
 export interface RepeatItemContext<T> {
   oldModelItem?: T;
   mounted?: boolean;
-  renderer?: Alina.Alina;
+  nodeContext?: Alina.Alina;
 }
 
 export interface AlRepeatContext<T> {
@@ -54,21 +54,21 @@ export class AlRepeat extends Alina.AlinaComponent {
       }
 
       // Create node
-      if (!itemContext.renderer) {
+      if (!itemContext.nodeContext) {
         let node = Alina.fromTemplate(props.template);
-        itemContext.renderer = this.root.create(node);
+        itemContext.nodeContext = this.root.create(node);
       }
 
       // Fill content
-      props.update(itemContext.renderer, modelItem);
+      props.update(itemContext.nodeContext, modelItem);
 
       // Insert to parent
       if (!itemContext.mounted) {
-        let position = i == 0 ? props.insertBefore : this.itemContexts[i - 1].renderer.node.nextSibling;
+        let position = i == 0 ? props.insertBefore : this.itemContexts[i - 1].nodeContext.node.nextSibling;
         if (position) {
-          props.container.insertBefore(itemContext.renderer.node, position);
+          props.container.insertBefore(itemContext.nodeContext.node, position);
         } else {
-          props.container.appendChild(itemContext.renderer.node);
+          props.container.appendChild(itemContext.nodeContext.node);
         }
         itemContext.mounted = true;
       }
@@ -79,7 +79,9 @@ export class AlRepeat extends Alina.AlinaComponent {
     // Remove old
     let firstIndexToRemove = items.length;
     for (let i = firstIndexToRemove; i < this.itemContexts.length; i++) {
-      let elem = this.itemContexts[i].renderer.node;
+      let context = this.itemContexts[i];
+      context.nodeContext.dispose();
+      let elem = context.nodeContext.node;
       if (elem) {
         props.container.removeChild(elem);
       }

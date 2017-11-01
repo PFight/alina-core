@@ -2,7 +2,7 @@
 
 export class AlFind extends Alina.AlinaComponent {
   public findNode(entry: string): Alina.Alina {
-    let context = this.root.getContext(entry, () => {
+    let context = this.root.getComponentContext(AlFind, entry, () => {
       let bindings: Alina.NodeBinding[] = [];
       this.findNodesInternal(this.root.node, entry, bindings, true);
       return { nodeContext: this.root.create(bindings[0]) };
@@ -11,7 +11,7 @@ export class AlFind extends Alina.AlinaComponent {
   }
 
   public findNodes(entry: string, render: (context: Alina.NodeContext) => void): void {
-    let context = this.root.getContext(entry, () => {
+    let context = this.root.getComponentContext(AlFind, entry, () => {
       let bindings: Alina.NodeBinding[] = [];
       this.findNodesInternal(this.root.node, entry, bindings, false);
       return { contexts: bindings.map(x => this.root.create(x)) };

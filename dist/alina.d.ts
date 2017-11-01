@@ -14,12 +14,16 @@ declare module "Utils" {
 declare module "NodeContext" {
     import * as Alina from "alina";
     export class NodeContext {
-        protected context: {
+        protected componentsContext: {
             [key: string]: any;
         };
-        protected parentRenderer: NodeContext;
+        protected _parent: NodeContext;
         protected _binding: Alina.NodeBinding;
-        protected extensions: ((renderer: Alina.NodeContext) => Alina.NodeContext)[];
+        protected extensions: {
+            [key: string]: (renderer: Alina.NodeContext) => Alina.NodeContext;
+        };
+        protected children: NodeContext[];
+        protected disposeListeners: ((context: Alina.NodeContext) => void)[];
         constructor(nodeOrBinding: Node | Alina.NodeBinding, parent: NodeContext);
         elem: HTMLElement;
         nodeAs<T extends Node>(): T;
@@ -27,11 +31,17 @@ declare module "NodeContext" {
         create(nodeOrBinding: Node | Alina.NodeBinding): this;
         readonly binding: Alina.NodeBinding;
         readonly parent: NodeContext;
-        getContext<T>(key: string, createContext?: () => T): T;
-        ext<T>(createExtension: (renderer: this) => T): T;
+        getComponentContext<T>(component: Function, additionalKey: string, createContext?: () => T): T;
+        clearComponentContext(component: Function, additionalKey: string): void;
+        ext<T extends Alina.NodeContext>(extension: (renderer: this) => T): T;
         mount<ComponentT extends Alina.Component<ContextT>, ContextT extends NodeContext, ServicesT>(this: ContextT, componentCtor: Alina.ComponentCtor<ComponentT, ContextT, ServicesT>, services?: ServicesT, key?: string): ComponentT;
         call<PropsT, RetT>(this: this, component: Alina.FuncComponent<this, PropsT, RetT>, props: PropsT, key?: string): RetT;
-        getKey(key: string, component: Function): string;
+        unmount<ComponentT extends Function>(component: ComponentT, key?: string): void;
+        unmountAll(): void;
+        addDisposeListener(callback: (context: this) => void): void;
+        removeDisposeListener(callback: (context: this) => void): void;
+        dispose(): void;
+        protected getComponentKey(key: string, component: Function): string;
         protected init(nodeOrBinding: Node | Alina.NodeBinding, parent: NodeContext): void;
         protected getNode(): Node;
         protected setNode(node: Node): void;
@@ -54,6 +64,9 @@ declare module "Component" {
     export class Component<T extends Alina.NodeContext = Alina.NodeContext> {
         protected root: T;
         constructor(root: T);
+        init(): void;
+        protected onInit(): void;
+        protected onDispose(): void;
     }
     export type FuncComponent<ContextT, PropsT, RetT> = (root: ContextT, props: PropsT) => RetT;
 }
@@ -73,7 +86,7 @@ declare module "AlRepeat" {
     export interface RepeatItemContext<T> {
         oldModelItem?: T;
         mounted?: boolean;
-        renderer?: Alina.Alina;
+        nodeContext?: Alina.Alina;
     }
     export interface AlRepeatContext<T> {
         template: HTMLTemplateElement;
@@ -102,7 +115,8 @@ declare module "AlShow" {
     export class AlShow extends Alina.AlinaComponent {
         lastValue: any;
         node: Node;
-        showIf(value: boolean): void;
+        nodeContext: Alina.Alina;
+        showIf(value: boolean, render?: (context: Alina.Alina) => void): void;
     }
 }
 declare module "AlTemplate" {
@@ -150,7 +164,7 @@ declare module "StandardExtensions" {
         findNode(entry: string): this;
         findNodes(entry: string, render: (context: this) => void): void;
         set<T>(stub: string, value: T): void;
-        showIf(templateSelector: string, value: boolean): void;
+        showIf(templateSelector: string, value: boolean, render?: (context: this) => void): void;
         tpl(key?: string): ITemplateProcessor<this>;
         repeat<T>(templateSelector: string, items: T[], update: (renderer: this, model: T) => void): void;
         on<T>(value: T, callback: (renderer: this, value?: T, prevValue?: T) => T | void, key?: string): void;

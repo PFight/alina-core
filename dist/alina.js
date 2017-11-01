@@ -34,17 +34,27 @@ var ATTRIBUTE_TO_IDL_MAP = {
     "for": "htmlFor"
 };
 
+var __assign = (window && window.__assign) || Object.assign || function(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+        s = arguments[i];
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+            t[p] = s[p];
+    }
+    return t;
+};
 var NodeContext = /** @class */ (function () {
     function NodeContext(nodeOrBinding, parent) {
-        this.extensions = [];
+        this.extensions = {};
+        this.children = [];
+        this.disposeListeners = [];
         this.init(nodeOrBinding, parent);
     }
     Object.defineProperty(NodeContext.prototype, "elem", {
         get: function () {
-            return this.node;
+            return this.getNode();
         },
         set: function (elem) {
-            this.node = elem;
+            this.setNode(elem);
         },
         enumerable: true,
         configurable: true
@@ -64,10 +74,6 @@ var NodeContext = /** @class */ (function () {
     });
     NodeContext.prototype.create = function (nodeOrBinding) {
         var inst = new NodeContext(nodeOrBinding, this);
-        for (var _i = 0, _a = this.extensions; _i < _a.length; _i++) {
-            var ext = _a[_i];
-            inst = ext(inst);
-        }
         return inst;
     };
     Object.defineProperty(NodeContext.prototype, "binding", {
@@ -79,45 +85,88 @@ var NodeContext = /** @class */ (function () {
     });
     Object.defineProperty(NodeContext.prototype, "parent", {
         get: function () {
-            return this.parentRenderer;
+            return this._parent;
         },
         enumerable: true,
         configurable: true
     });
-    NodeContext.prototype.getContext = function (key, createContext) {
-        var context = this.context[key];
+    NodeContext.prototype.getComponentContext = function (component, additionalKey, createContext) {
+        var key = this.getComponentKey(additionalKey, component);
+        var context = this.componentsContext[key];
         if (!context) {
-            context = this.context[key] = createContext ? createContext() : {};
+            context = this.componentsContext[key] = createContext ? createContext() : {};
         }
         return context;
     };
-    NodeContext.prototype.ext = function (createExtension) {
-        var _this = this;
-        var key = this.getKey("", createExtension);
-        var context = this.getContext(key, function () {
-            _this.extensions.push(createExtension);
-            return { extension: createExtension(_this) };
-        });
-        return context.extension;
+    NodeContext.prototype.clearComponentContext = function (component, additionalKey) {
+        var key = this.getComponentKey(additionalKey, component);
+        delete this.componentsContext[key];
+    };
+    NodeContext.prototype.ext = function (extension) {
+        var key = this.getComponentKey("", extension);
+        var ext = this.extensions[key];
+        if (!ext) {
+            extension(this);
+            this.extensions[key] = extension;
+        }
+        return this;
     };
     NodeContext.prototype.mount = function (componentCtor, services, key) {
         var _this = this;
-        var componentKey = this.getKey(key, componentCtor);
-        var context = this.getContext(componentKey, function () {
-            var instance = new componentCtor(_this, services);
-            return { instance: instance };
+        var context = this.getComponentContext(componentCtor, key, function () {
+            var context = _this.create(_this.binding);
+            var instance = new componentCtor(context, services);
+            instance.init();
+            return { instance: instance, context: context };
         });
         return context.instance;
     };
     NodeContext.prototype.call = function (component, props, key) {
         var _this = this;
-        var componentKey = this.getKey(key, component);
-        var context = this.getContext(componentKey, function () { return ({
-            renderer: _this.create(_this.binding)
+        var context = this.getComponentContext(component, key, function () { return ({
+            context: _this.create(_this.binding)
         }); });
-        return component(context.renderer, props);
+        return component(context.context, props);
     };
-    NodeContext.prototype.getKey = function (key, component) {
+    NodeContext.prototype.unmount = function (component, key) {
+        var context = this.getComponentContext(component, key);
+        if (context.context) {
+            context.context.dispose();
+        }
+        this.clearComponentContext(component, key);
+    };
+    NodeContext.prototype.unmountAll = function () {
+        var children = this.children.slice();
+        for (var _i = 0, children_1 = children; _i < children_1.length; _i++) {
+            var c = children_1[_i];
+            c.dispose();
+        }
+        this.componentsContext = {};
+    };
+    NodeContext.prototype.addDisposeListener = function (callback) {
+        this.disposeListeners.push(callback);
+    };
+    NodeContext.prototype.removeDisposeListener = function (callback) {
+        var index = this.disposeListeners.indexOf(callback);
+        if (index >= 0) {
+            this.disposeListeners.splice(index, 1);
+        }
+    };
+    NodeContext.prototype.dispose = function () {
+        for (var _i = 0, _a = this.disposeListeners; _i < _a.length; _i++) {
+            var listener = _a[_i];
+            listener(this);
+        }
+        var children = this.children.slice();
+        for (var _b = 0, children_2 = children; _b < children_2.length; _b++) {
+            var child = children_2[_b];
+            child.dispose();
+        }
+        if (this.parent) {
+            this.parent.children.splice(this.parent.children.indexOf(this), 1);
+        }
+    };
+    NodeContext.prototype.getComponentKey = function (key, component) {
         var result = key || "";
         if (component["AlinaComponentName"]) {
             result += component["AlinaComponentName"];
@@ -138,12 +187,16 @@ var NodeContext = /** @class */ (function () {
             };
         }
         else {
-            this._binding = nodeOrBinding;
+            this._binding = __assign({}, nodeOrBinding);
         }
-        this.context = {};
-        this.parentRenderer = parent;
+        this.componentsContext = {};
+        this._parent = parent;
         if (parent) {
-            this.extensions = parent.extensions.slice();
+            this.extensions = __assign({}, parent.extensions);
+            for (var extKey in this.extensions) {
+                this.extensions[extKey](this);
+            }
+            parent.children.push(this);
         }
     };
     NodeContext.prototype.getNode = function () {
@@ -157,8 +210,8 @@ var NodeContext = /** @class */ (function () {
         if (oldVal != node) {
             this._binding.node = node;
             this._binding.queryType = exports.QueryType.Node;
-            if (this.parentRenderer && this.parentRenderer.node == oldVal) {
-                this.parentRenderer.node = node;
+            if (this._parent && this._parent.node == oldVal) {
+                this._parent.node = node;
             }
         }
     };
@@ -174,8 +227,17 @@ var COMPONENT_KEY_COUNTER = 1;
 
 var Component = /** @class */ (function () {
     function Component(root) {
+        var _this = this;
         this.root = root;
+        root.addDisposeListener(function () { return _this.onDispose(); });
     }
+    Component.prototype.init = function () {
+        this.onInit();
+    };
+    Component.prototype.onInit = function () {
+    };
+    Component.prototype.onDispose = function () {
+    };
     return Component;
 }());
 
@@ -244,20 +306,20 @@ var AlRepeat = /** @class */ (function (_super) {
                 itemContext = this.itemContexts[i] = {};
             }
             // Create node
-            if (!itemContext.renderer) {
+            if (!itemContext.nodeContext) {
                 var node = fromTemplate(props.template);
-                itemContext.renderer = this.root.create(node);
+                itemContext.nodeContext = this.root.create(node);
             }
             // Fill content
-            props.update(itemContext.renderer, modelItem);
+            props.update(itemContext.nodeContext, modelItem);
             // Insert to parent
             if (!itemContext.mounted) {
-                var position = i == 0 ? props.insertBefore : this.itemContexts[i - 1].renderer.node.nextSibling;
+                var position = i == 0 ? props.insertBefore : this.itemContexts[i - 1].nodeContext.node.nextSibling;
                 if (position) {
-                    props.container.insertBefore(itemContext.renderer.node, position);
+                    props.container.insertBefore(itemContext.nodeContext.node, position);
                 }
                 else {
-                    props.container.appendChild(itemContext.renderer.node);
+                    props.container.appendChild(itemContext.nodeContext.node);
                 }
                 itemContext.mounted = true;
             }
@@ -266,7 +328,9 @@ var AlRepeat = /** @class */ (function (_super) {
         // Remove old
         var firstIndexToRemove = items.length;
         for (var i = firstIndexToRemove; i < this.itemContexts.length; i++) {
-            var elem = this.itemContexts[i].renderer.node;
+            var context_1 = this.itemContexts[i];
+            context_1.nodeContext.dispose();
+            var elem = context_1.nodeContext.node;
             if (elem) {
                 props.container.removeChild(elem);
             }
@@ -347,24 +411,35 @@ var AlShow = /** @class */ (function (_super) {
     function AlShow() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    AlShow.prototype.showIf = function (value) {
+    AlShow.prototype.showIf = function (value, render) {
         if (this.lastValue !== value) {
             var templateElem = this.root.nodeAs();
-            var node = this.node;
             if (value) {
-                if (!node) {
-                    node = this.node = fromTemplate(templateElem);
+                // Value changed and now is true - show node
+                this.node = fromTemplate(templateElem);
+                if (render) {
+                    this.nodeContext = this.root.create(this.node);
+                    render(this.nodeContext);
                 }
-                if (!node.parentElement) {
-                    templateElem.parentElement.insertBefore(node, templateElem);
-                }
+                templateElem.parentElement.insertBefore(this.node, templateElem);
             }
             else {
-                if (node && node.parentElement) {
-                    node.parentElement.removeChild(node);
+                // Value changed and now is false - remove node
+                if (this.nodeContext) {
+                    this.nodeContext.dispose();
+                    this.nodeContext = null;
+                }
+                if (this.node && this.node.parentElement) {
+                    this.node.parentElement.removeChild(this.node);
                 }
             }
             this.lastValue = value;
+        }
+        else {
+            // Render on every call, even if value not changed
+            if (value && render && this.nodeContext) {
+                render(this.nodeContext);
+            }
         }
     };
     return AlShow;
@@ -452,14 +527,14 @@ var AlQuery = /** @class */ (function (_super) {
     }
     AlQuery.prototype.query = function (selector) {
         var _this = this;
-        var context = this.root.getContext(selector, function () { return ({
+        var context = this.root.getComponentContext(AlQuery, selector, function () { return ({
             result: _this.root.create(_this.querySelectorInternal(selector))
         }); });
         return context.result;
     };
     AlQuery.prototype.queryAll = function (selector, render) {
         var _this = this;
-        var context = this.root.getContext(selector, function () { return ({
+        var context = this.root.getComponentContext(AlQuery, selector, function () { return ({
             contexts: _this.querySelectorAllInternal(selector).map(function (x) { return _this.root.create({
                 node: x,
                 queryType: exports.QueryType.Node,
@@ -516,7 +591,7 @@ var AlEntry = /** @class */ (function (_super) {
     }
     AlEntry.prototype.getEntries = function (entry, render) {
         var _this = this;
-        var context = this.root.getContext(entry, function () {
+        var context = this.root.getComponentContext(AlEntry, entry, function () {
             var bindings = [];
             _this.getEntiresInternal(_this.root.node, entry, bindings, false);
             return { contexts: bindings.map(function (x) { return _this.root.create(x); }) };
@@ -528,7 +603,7 @@ var AlEntry = /** @class */ (function (_super) {
     };
     AlEntry.prototype.getEntry = function (entry) {
         var _this = this;
-        var context = this.root.getContext(entry, function () {
+        var context = this.root.getComponentContext(AlEntry, entry, function () {
             var bindings = [];
             _this.getEntiresInternal(_this.root.node, entry, bindings, true);
             return { nodeContext: _this.root.create(bindings[0]) };
@@ -610,7 +685,7 @@ var AlFind = /** @class */ (function (_super) {
     }
     AlFind.prototype.findNode = function (entry) {
         var _this = this;
-        var context = this.root.getContext(entry, function () {
+        var context = this.root.getComponentContext(AlFind, entry, function () {
             var bindings = [];
             _this.findNodesInternal(_this.root.node, entry, bindings, true);
             return { nodeContext: _this.root.create(bindings[0]) };
@@ -619,7 +694,7 @@ var AlFind = /** @class */ (function (_super) {
     };
     AlFind.prototype.findNodes = function (entry, render) {
         var _this = this;
-        var context = this.root.getContext(entry, function () {
+        var context = this.root.getComponentContext(AlFind, entry, function () {
             var bindings = [];
             _this.findNodesInternal(_this.root.node, entry, bindings, false);
             return { contexts: bindings.map(function (x) { return _this.root.create(x); }) };
@@ -690,14 +765,14 @@ function StandardExt(renderer) {
     return result;
 }
 function on(value, callback, key) {
-    var context = this.getContext(this.getKey(key, on));
+    var context = this.getComponentContext(on, key);
     if (context.lastValue !== value) {
         var result = callback(this, value, context.lastValue);
         context.lastValue = result !== undefined ? result : value;
     }
 }
 function once(callback) {
-    var context = this.getContext(this.getKey("", once), function () { return ({ first: true }); });
+    var context = this.getComponentContext(once, "", function () { return ({ first: true }); });
     if (context.first) {
         callback(this);
         context.first = false;
@@ -730,9 +805,9 @@ function repeat(templateSelector, items, update) {
     this.mount(AlQuery).query(templateSelector)
         .mount(AlRepeat).repeat(items, update);
 }
-function showIf(templateSelector, value) {
+function showIf(templateSelector, value, render) {
     this.mount(AlQuery).query(templateSelector)
-        .mount(AlShow).showIf(value);
+        .mount(AlShow).showIf(value, render);
 }
 function tpl(key) {
     return this.mount(AlTemplate, key);

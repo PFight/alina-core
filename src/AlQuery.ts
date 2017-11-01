@@ -3,14 +3,14 @@
 export class AlQuery extends Alina.AlinaComponent {
 
   public query(selector: string): Alina.Alina {
-    let context = this.root.getContext(selector, () => ({
+    let context = this.root.getComponentContext(AlQuery, selector, () => ({
       result: this.root.create(this.querySelectorInternal(selector))
     }));
     return context.result;
   }
 
   public queryAll(selector: string, render: (context: Alina.NodeContext) => void): void {
-    let context = this.root.getContext(selector, () => ({
+    let context = this.root.getComponentContext(AlQuery, selector, () => ({
       contexts:
         this.querySelectorAllInternal(selector).map(x => this.root.create({
           node: x,

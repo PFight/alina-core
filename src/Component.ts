@@ -2,6 +2,17 @@
 
 export class Component<T extends Alina.NodeContext = Alina.NodeContext> {
   constructor(protected root: T) {
+    root.addDisposeListener(() => this.onDispose());
+  }
+
+  public init() {
+    this.onInit();
+  }
+
+  protected onInit() {
+  }
+
+  protected onDispose() {
   }
 }
 

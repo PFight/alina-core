@@ -3,7 +3,7 @@
 export class AlEntry extends Alina.AlinaComponent {
 
   public getEntries(entry: string, render: (context: Alina.Alina) => void): void {
-    let context = this.root.getContext(entry, () => {
+    let context = this.root.getComponentContext(AlEntry, entry, () => {
       let bindings: Alina.NodeBinding[] = [];
       this.getEntiresInternal(this.root.node, entry, bindings, false);
       return { contexts: bindings.map(x => this.root.create(x)) };
@@ -14,7 +14,7 @@ export class AlEntry extends Alina.AlinaComponent {
   }
 
   public getEntry(entry: string): Alina.Alina {
-    let context = this.root.getContext(entry, () => {
+    let context = this.root.getComponentContext(AlEntry, entry, () => {
       let bindings: Alina.NodeBinding[] = [];
       this.getEntiresInternal(this.root.node, entry, bindings, true);
       return { nodeContext: this.root.create(bindings[0]) };
