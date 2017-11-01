@@ -7,8 +7,8 @@ declare module "Utils" {
     export var ATTRIBUTE_TO_IDL_MAP: {
         [attributeName: string]: string;
     };
-    export interface Ctor<ComponentT> {
-        new (): ComponentT;
+    export interface ComponentCtor<ComponentT, ContextT, DepsT> {
+        new (context: ContextT, deps?: DepsT): ComponentT;
     }
 }
 declare module "NodeContext" {
@@ -29,7 +29,7 @@ declare module "NodeContext" {
         readonly parent: NodeContext;
         getContext<T>(key: string, createContext?: () => T): T;
         ext<T>(createExtension: (renderer: this) => T): T;
-        mount<ComponentT extends Alina.Component<this>>(this: this, componentCtor: Alina.Ctor<ComponentT>, key?: string): ComponentT;
+        mount<ComponentT extends Alina.Component<ContextT>, ContextT extends NodeContext, ServicesT>(this: ContextT, componentCtor: Alina.ComponentCtor<ComponentT, ContextT, ServicesT>, services?: ServicesT, key?: string): ComponentT;
         call<PropsT, RetT>(this: this, component: Alina.FuncComponent<this, PropsT, RetT>, props: PropsT, key?: string): RetT;
         getKey(key: string, component: Function): string;
         protected init(nodeOrBinding: Node | Alina.NodeBinding, parent: NodeContext): void;
@@ -52,8 +52,8 @@ declare module "NodeContext" {
 declare module "Component" {
     import * as Alina from "alina";
     export class Component<T extends Alina.NodeContext = Alina.NodeContext> {
-        root: T;
-        initialize(context: T): void;
+        protected root: T;
+        constructor(root: T);
     }
     export type FuncComponent<ContextT, PropsT, RetT> = (root: ContextT, props: PropsT) => RetT;
 }

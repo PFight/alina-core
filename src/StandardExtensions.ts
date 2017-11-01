@@ -49,53 +49,54 @@ function on<T>(this: Alina.NodeContext, value: T, callback: (renderer, value?: T
 }
 
 function once(this: Alina.NodeContext, callback: (renderer) => void): void {
-  let context = this.getContext(this.getKey("", once));
-  if(!context) {
+  let context = this.getContext(this.getKey("", once), () => ({ first: true }));
+  if(context.first) {
     callback(this);
+    context.first = false;
   }
 }
 
-function query(this: Alina.NodeContext, selector: string): any {
+function query(this: Alina.Alina, selector: string): any {
   return this.mount(Alina.AlQuery).query(selector);
 }
 
-function queryAll(this: Alina.NodeContext, selector: string, render: (context) => void): void {
+function queryAll(this: Alina.Alina, selector: string, render: (context) => void): void {
   this.mount(Alina.AlQuery).queryAll(selector, render);
 }
 
-function getEntries(this: Alina.NodeContext, entry: string, render: (context) => void): any {
+function getEntries(this: Alina.Alina, entry: string, render: (context) => void): any {
   return this.mount(Alina.AlEntry).getEntries(entry, render);
 }
 
-function getEntry(this: Alina.NodeContext, entry: string): any {
+function getEntry(this: Alina.Alina, entry: string): any {
   return this.mount(Alina.AlEntry).getEntry(entry);
 }
 
-function findNode(this: Alina.NodeContext, entry: string): any {
+function findNode(this: Alina.Alina, entry: string): any {
   return this.mount(Alina.AlFind).findNode(entry);
 }
 
-function findNodes(this: Alina.NodeContext, entry: string, render: (context) => void): any {
+function findNodes(this: Alina.Alina, entry: string, render: (context) => void): any {
   return this.mount(Alina.AlFind).findNodes(entry, render);
 }
 
-function set<T>(this: Alina.NodeContext, stub: string, value: T): void {
+function set<T>(this: Alina.Alina, stub: string, value: T): void {
   this.mount(Alina.AlEntry).getEntries(stub, (context) => {
     context.mount(Alina.AlSet).set(value);
   });
 }
 
-function repeat<T>(this: Alina.NodeContext, templateSelector: string, items: T[], update: (renderer, model: T) => void): void {
+function repeat<T>(this: Alina.Alina, templateSelector: string, items: T[], update: (renderer, model: T) => void): void {
   this.mount(Alina.AlQuery).query(templateSelector)
     .mount(Alina.AlRepeat).repeat(items, update);
 }
 
-function showIf(this: Alina.NodeContext, templateSelector: string, value: boolean): void {
+function showIf(this: Alina.Alina, templateSelector: string, value: boolean): void {
   this.mount(Alina.AlQuery).query(templateSelector)
     .mount(Alina.AlShow).showIf(value);
 }
 
-function tpl(this: Alina.NodeContext, key?: string): any {
+function tpl(this: Alina.Alina, key?: string): any {
   return this.mount(Alina.AlTemplate, key);
 }
 

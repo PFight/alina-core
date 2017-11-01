@@ -1,10 +1,7 @@
 ﻿import * as Alina from "./alina";
 
 export class Component<T extends Alina.NodeContext = Alina.NodeContext> {
-  root: T;
-
-  initialize(context: T) {
-    this.root = context;
+  constructor(protected root: T) {
   }
 }
 

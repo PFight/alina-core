@@ -33,6 +33,6 @@ export var ATTRIBUTE_TO_IDL_MAP: { [attributeName: string]: string } = {
   "for": "htmlFor"
 };
 
-export interface Ctor<ComponentT> {
-  new(): ComponentT;
+export interface ComponentCtor<ComponentT, ContextT, DepsT> {
+  new(context: ContextT, deps?: DepsT): ComponentT;
 }

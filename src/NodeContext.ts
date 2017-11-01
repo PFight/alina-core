@@ -62,14 +62,14 @@ export class NodeContext {
     return context.extension;
   }
 
-  public mount<ComponentT extends Alina.Component<this>>(this: this,
-    componentCtor: Alina.Ctor<ComponentT>,
+  public mount<ComponentT extends Alina.Component<ContextT>, ContextT extends NodeContext, ServicesT>(this: ContextT,
+    componentCtor: Alina.ComponentCtor<ComponentT, ContextT, ServicesT>,
+    services?: ServicesT,
     key?: string): ComponentT
   {
     let componentKey = this.getKey(key, componentCtor);
     let context = this.getContext(componentKey, () => {
-      let instance = new componentCtor() as any;
-      (instance as Alina.Component<this>).initialize(this);
+      let instance = new componentCtor(this, services);
       return { instance };
     });
     return context.instance;

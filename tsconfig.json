@@ -4,7 +4,8 @@
 		"module": "es6",
 		"moduleResolution": "node",
     "noEmitHelpers": false,
-    "importHelpers":  false,
+    "importHelpers": false,
+    "strictFunctionTypes": true,
     "lib": [ "es6", "dom" ],
     "declaration": false
 	},

@@ -26,9 +26,9 @@ export class AlQuery extends Alina.AlinaComponent {
 
   protected querySelectorInternal(selector: string) {
     let result: Element;    
-    if (this.root.node.nodeType == Node.ELEMENT_NODE) {
+    if (this.root.node.nodeType == Node.ELEMENT_NODE || this.root.node.nodeType == Node.DOCUMENT_NODE) {
       let elem = this.root.node as HTMLElement;
-      if (elem.matches(selector)) {
+      if (elem.matches && elem.matches(selector)) {
         result = elem;
       } else {
         result = elem.querySelector(selector);
@@ -40,9 +40,9 @@ export class AlQuery extends Alina.AlinaComponent {
   protected querySelectorAllInternal(selector: string) {
     let result: Element[] = [];
     let node = this.root.node;
-    if (node.nodeType == Node.ELEMENT_NODE) {
+    if (node.nodeType == Node.ELEMENT_NODE || node.nodeType == Node.DOCUMENT_NODE) {
       let elem = node as HTMLElement;
-      if (elem.matches(selector)) {
+      if (elem.matches && elem.matches(selector)) {
         result.push(elem);
       }
       result = result.concat(elem.querySelectorAll(selector) as any);

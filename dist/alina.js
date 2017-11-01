@@ -34,7 +34,7 @@ var ATTRIBUTE_TO_IDL_MAP = {
     "for": "htmlFor"
 };
 
-var NodeContext = (function () {
+var NodeContext = /** @class */ (function () {
     function NodeContext(nodeOrBinding, parent) {
         this.extensions = [];
         this.init(nodeOrBinding, parent);
@@ -100,12 +100,11 @@ var NodeContext = (function () {
         });
         return context.extension;
     };
-    NodeContext.prototype.mount = function (componentCtor, key) {
+    NodeContext.prototype.mount = function (componentCtor, services, key) {
         var _this = this;
         var componentKey = this.getKey(key, componentCtor);
         var context = this.getContext(componentKey, function () {
-            var instance = new componentCtor();
-            instance.initialize(_this);
+            var instance = new componentCtor(_this, services);
             return { instance: instance };
         });
         return context.instance;
@@ -173,12 +172,10 @@ var NodeContext = (function () {
 })(exports.QueryType || (exports.QueryType = {}));
 var COMPONENT_KEY_COUNTER = 1;
 
-var Component = (function () {
-    function Component() {
+var Component = /** @class */ (function () {
+    function Component(root) {
+        this.root = root;
     }
-    Component.prototype.initialize = function (context) {
-        this.root = context;
-    };
     return Component;
 }());
 
@@ -192,7 +189,7 @@ var __extends = (window && window.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var AlinaComponent = (function (_super) {
+var AlinaComponent = /** @class */ (function (_super) {
     __extends(AlinaComponent, _super);
     function AlinaComponent() {
         return _super !== null && _super.apply(this, arguments) || this;
@@ -214,7 +211,7 @@ var __extends$1 = (window && window.__extends) || (function () {
 })();
 var undefinedOrNull$1 = undefinedOrNull;
 var definedNotNull$1 = definedNotNull;
-var AlRepeat = (function (_super) {
+var AlRepeat = /** @class */ (function (_super) {
     __extends$1(AlRepeat, _super);
     function AlRepeat() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
@@ -294,7 +291,7 @@ var __extends$2 = (window && window.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var AlSet = (function (_super) {
+var AlSet = /** @class */ (function (_super) {
     __extends$2(AlSet, _super);
     function AlSet() {
         return _super !== null && _super.apply(this, arguments) || this;
@@ -345,7 +342,7 @@ var __extends$3 = (window && window.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var AlShow = (function (_super) {
+var AlShow = /** @class */ (function (_super) {
     __extends$3(AlShow, _super);
     function AlShow() {
         return _super !== null && _super.apply(this, arguments) || this;
@@ -383,7 +380,7 @@ var __extends$4 = (window && window.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var AlTemplate = (function (_super) {
+var AlTemplate = /** @class */ (function (_super) {
     __extends$4(AlTemplate, _super);
     function AlTemplate() {
         return _super !== null && _super.apply(this, arguments) || this;
@@ -448,7 +445,7 @@ var __extends$5 = (window && window.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var AlQuery = (function (_super) {
+var AlQuery = /** @class */ (function (_super) {
     __extends$5(AlQuery, _super);
     function AlQuery() {
         return _super !== null && _super.apply(this, arguments) || this;
@@ -476,9 +473,9 @@ var AlQuery = (function (_super) {
     };
     AlQuery.prototype.querySelectorInternal = function (selector) {
         var result;
-        if (this.root.node.nodeType == Node.ELEMENT_NODE) {
+        if (this.root.node.nodeType == Node.ELEMENT_NODE || this.root.node.nodeType == Node.DOCUMENT_NODE) {
             var elem = this.root.node;
-            if (elem.matches(selector)) {
+            if (elem.matches && elem.matches(selector)) {
                 result = elem;
             }
             else {
@@ -490,9 +487,9 @@ var AlQuery = (function (_super) {
     AlQuery.prototype.querySelectorAllInternal = function (selector) {
         var result = [];
         var node = this.root.node;
-        if (node.nodeType == Node.ELEMENT_NODE) {
+        if (node.nodeType == Node.ELEMENT_NODE || node.nodeType == Node.DOCUMENT_NODE) {
             var elem = node;
-            if (elem.matches(selector)) {
+            if (elem.matches && elem.matches(selector)) {
                 result.push(elem);
             }
             result = result.concat(elem.querySelectorAll(selector));
@@ -512,7 +509,7 @@ var __extends$6 = (window && window.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var AlEntry = (function (_super) {
+var AlEntry = /** @class */ (function (_super) {
     __extends$6(AlEntry, _super);
     function AlEntry() {
         return _super !== null && _super.apply(this, arguments) || this;
@@ -606,7 +603,7 @@ var __extends$7 = (window && window.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var AlFind = (function (_super) {
+var AlFind = /** @class */ (function (_super) {
     __extends$7(AlFind, _super);
     function AlFind() {
         return _super !== null && _super.apply(this, arguments) || this;
@@ -665,7 +662,7 @@ var AlFind = (function (_super) {
     return AlFind;
 }(AlinaComponent));
 
-var Slot = (function () {
+var Slot = /** @class */ (function () {
     function Slot(component) {
         this.component = component;
     }
@@ -700,9 +697,10 @@ function on(value, callback, key) {
     }
 }
 function once(callback) {
-    var context = this.getContext(this.getKey("", once));
-    if (!context) {
+    var context = this.getContext(this.getKey("", once), function () { return ({ first: true }); });
+    if (context.first) {
         callback(this);
+        context.first = false;
     }
 }
 function query(selector) {
