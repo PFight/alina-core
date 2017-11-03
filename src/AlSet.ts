@@ -34,4 +34,10 @@ export class AlSet extends Alina.AlinaComponent {
       this.lastValue = preparedValue;
     }
   }
+
+  setEntryOnce(value) {
+    if (this.lastValue === undefined) {
+      this.setEntry(value);
+    }
+  }
 }

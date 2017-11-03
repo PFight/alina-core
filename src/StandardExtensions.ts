@@ -8,6 +8,7 @@ export interface StandardExtensions {
   findNode(entry: string): this;
   findNodes(entry: string, render: (context: this) => void): void;
   set<T>(stub: string, value: T): void;
+  setOnce<T>(stub: string, value: T): void;
   showIf(templateSelector: string, value: boolean, render?: (context: this) => void): void;
   tpl(key?: string): ITemplateProcessor<this>;
   repeat<T>(templateSelector: string, items: T[], update: (renderer: this, model: T) => void): void;
@@ -32,6 +33,7 @@ export function StandardExt<T extends Alina.NodeContext>(renderer: T): T & Stand
   result.findNode = findNode;
   result.findNodes = findNodes;
   result.set = set;
+  result.setOnce = setOnce;
   result.showIf = showIf;
   result.tpl = tpl;
   result.repeat = repeat;
@@ -85,6 +87,13 @@ function set<T>(this: Alina.Alina, stub: string, value: T): void {
     context.mount(Alina.AlSet).setEntry(value);
   });
 }
+
+function setOnce<T>(this: Alina.Alina, stub: string, value: T): void {
+  this.mount(Alina.AlEntry).getEntries(stub, (context) => {
+    context.mount(Alina.AlSet).setEntryOnce(value);
+  });
+}
+
 
 function repeat<T>(this: Alina.Alina, templateSelector: string, items: T[], update: (renderer, model: T) => void): void {
   this.mount(Alina.AlQuery).query(templateSelector)

@@ -36,3 +36,34 @@ export var ATTRIBUTE_TO_IDL_MAP: { [attributeName: string]: string } = {
 export interface ComponentCtor<ComponentT, ContextT, DepsT> {
   new(context: ContextT, deps?: DepsT): ComponentT;
 }
+
+export function defaultEmptyFunc(target: Object, propertyKey: string | symbol): void {
+  if (target[propertyKey] === undefined) {
+    target[propertyKey] = null;
+  }
+  let descriptor = Object.getOwnPropertyDescriptor(target, propertyKey);  
+  if (descriptor.get || descriptor.set) {
+    let originalGet = descriptor.get;
+    let originalSet = descriptor.set;
+    descriptor.get = function () {
+      return originalGet.call(this) || empty;
+    };
+    descriptor.set = function (val) {
+      originalSet.call(this, val);
+    }
+  } else {
+    delete descriptor.value;
+    delete descriptor.writable;
+    let value = null;
+    descriptor.get = function () {
+      return value || empty;
+    };
+    descriptor.set = function (val) {
+      value = val;
+    }
+  }
+  Object.defineProperty(target, propertyKey, descriptor);
+}
+
+function empty() {
+}

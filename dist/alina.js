@@ -33,6 +33,36 @@ var ATTRIBUTE_TO_IDL_MAP = {
     "class": "className",
     "for": "htmlFor"
 };
+function defaultEmptyFunc(target, propertyKey) {
+    if (target[propertyKey] === undefined) {
+        target[propertyKey] = null;
+    }
+    var descriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
+    if (descriptor.get || descriptor.set) {
+        var originalGet_1 = descriptor.get;
+        var originalSet_1 = descriptor.set;
+        descriptor.get = function () {
+            return originalGet_1.call(this) || empty;
+        };
+        descriptor.set = function (val) {
+            originalSet_1.call(this, val);
+        };
+    }
+    else {
+        delete descriptor.value;
+        delete descriptor.writable;
+        var value_1 = null;
+        descriptor.get = function () {
+            return value_1 || empty;
+        };
+        descriptor.set = function (val) {
+            value_1 = val;
+        };
+    }
+    Object.defineProperty(target, propertyKey, descriptor);
+}
+function empty() {
+}
 
 var __assign = (window && window.__assign) || Object.assign || function(t) {
     for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -411,6 +441,11 @@ var AlSet = /** @class */ (function (_super) {
             this.lastValue = preparedValue;
         }
     };
+    AlSet.prototype.setEntryOnce = function (value) {
+        if (this.lastValue === undefined) {
+            this.setEntry(value);
+        }
+    };
     return AlSet;
 }(AlinaComponent));
 
@@ -775,6 +810,7 @@ function StandardExt(renderer) {
     result.findNode = findNode;
     result.findNodes = findNodes;
     result.set = set;
+    result.setOnce = setOnce;
     result.showIf = showIf;
     result.tpl = tpl;
     result.repeat = repeat;
@@ -819,6 +855,11 @@ function set(stub, value) {
         context.mount(AlSet).setEntry(value);
     });
 }
+function setOnce(stub, value) {
+    this.mount(AlEntry).getEntries(stub, function (context) {
+        context.mount(AlSet).setEntryOnce(value);
+    });
+}
 function repeat(templateSelector, items, update) {
     this.mount(AlQuery).query(templateSelector)
         .mount(AlRepeat).repeat(items, update);
@@ -837,6 +878,7 @@ exports.definedNotNull = definedNotNull;
 exports.undefinedOrNull = undefinedOrNull;
 exports.getIdlName = getIdlName;
 exports.ATTRIBUTE_TO_IDL_MAP = ATTRIBUTE_TO_IDL_MAP;
+exports.defaultEmptyFunc = defaultEmptyFunc;
 exports.NodeContext = NodeContext;
 exports.Component = Component;
 exports.AlinaComponent = AlinaComponent;

@@ -10,6 +10,7 @@ declare module "Utils" {
     export interface ComponentCtor<ComponentT, ContextT, DepsT> {
         new (context: ContextT, deps?: DepsT): ComponentT;
     }
+    export function defaultEmptyFunc(target: Object, propertyKey: string | symbol): void;
 }
 declare module "NodeContext" {
     import * as Alina from "alina";
@@ -113,6 +114,7 @@ declare module "AlSet" {
     export class AlSet extends Alina.AlinaComponent {
         lastValue: any;
         setEntry(value: any): void;
+        setEntryOnce(value: any): void;
     }
 }
 declare module "AlShow" {
@@ -169,6 +171,7 @@ declare module "StandardExtensions" {
         findNode(entry: string): this;
         findNodes(entry: string, render: (context: this) => void): void;
         set<T>(stub: string, value: T): void;
+        setOnce<T>(stub: string, value: T): void;
         showIf(templateSelector: string, value: boolean, render?: (context: this) => void): void;
         tpl(key?: string): ITemplateProcessor<this>;
         repeat<T>(templateSelector: string, items: T[], update: (renderer: this, model: T) => void): void;
