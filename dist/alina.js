@@ -231,8 +231,17 @@ var Component = /** @class */ (function () {
         this.root = root;
         root.addDisposeListener(function () { return _this.onDispose(); });
     }
+    Component.prototype.set = function (props) {
+        for (var key in props) {
+            this[key] = props[key];
+        }
+        return this;
+    };
     Component.prototype.init = function () {
         this.onInit();
+    };
+    Component.prototype.makeTemplate = function (str) {
+        return makeTemplate(str);
     };
     Component.prototype.onInit = function () {
     };
@@ -256,6 +265,15 @@ var AlinaComponent = /** @class */ (function (_super) {
     function AlinaComponent() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    AlinaComponent.prototype.addChild = function (template, render) {
+        this.root.tpl().addChild(template, render);
+    };
+    AlinaComponent.prototype.setChild = function (template, render) {
+        this.root.tpl().setChild(template, render);
+    };
+    AlinaComponent.prototype.replace = function (template, render) {
+        this.root.tpl().replace(template, render);
+    };
     return AlinaComponent;
 }(Component));
 
@@ -360,7 +378,7 @@ var AlSet = /** @class */ (function (_super) {
     function AlSet() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    AlSet.prototype.set = function (value) {
+    AlSet.prototype.setEntry = function (value) {
         if (this.lastValue !== value) {
             var preparedValue = value;
             var binding = this.root.binding;
@@ -798,7 +816,7 @@ function findNodes(entry, render) {
 }
 function set(stub, value) {
     this.mount(AlEntry).getEntries(stub, function (context) {
-        context.mount(AlSet).set(value);
+        context.mount(AlSet).setEntry(value);
     });
 }
 function repeat(templateSelector, items, update) {

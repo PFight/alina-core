@@ -3,7 +3,7 @@
 export class AlSet extends Alina.AlinaComponent {
   lastValue: any;
 
-  set(value) {
+  setEntry(value) {
     if (this.lastValue !== value) {
       let preparedValue = value;
       let binding = this.root.binding;

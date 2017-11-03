@@ -82,7 +82,7 @@ function findNodes(this: Alina.Alina, entry: string, render: (context) => void):
 
 function set<T>(this: Alina.Alina, stub: string, value: T): void {
   this.mount(Alina.AlEntry).getEntries(stub, (context) => {
-    context.mount(Alina.AlSet).set(value);
+    context.mount(Alina.AlSet).setEntry(value);
   });
 }
 

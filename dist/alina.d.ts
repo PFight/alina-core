@@ -64,7 +64,9 @@ declare module "Component" {
     export class Component<T extends Alina.NodeContext = Alina.NodeContext> {
         protected root: T;
         constructor(root: T);
+        set(props?: Partial<this>): this;
         init(): void;
+        protected makeTemplate(str: string): HTMLTemplateElement;
         protected onInit(): void;
         protected onDispose(): void;
     }
@@ -73,7 +75,10 @@ declare module "Component" {
 declare module "Main" {
     import * as Alina from "alina";
     export type Alina = Alina.NodeContext & Alina.StandardExtensions;
-    export class AlinaComponent extends Alina.Component<Alina> {
+    export class AlinaComponent<ContextT extends Alina.Alina = Alina> extends Alina.Component<ContextT> implements Alina.ITemplateProcessor<ContextT> {
+        addChild(template: HTMLTemplateElement, render?: (renderer: ContextT) => void): void;
+        setChild(template: HTMLTemplateElement, render?: (renderer: ContextT) => void): void;
+        replace(template: HTMLTemplateElement, render?: (renderer: ContextT) => void): void;
     }
     export type FuncAlinaComponent<PropsT, RetT> = Alina.FuncComponent<Alina, PropsT, RetT>;
     export var Document: Alina;
@@ -107,7 +112,7 @@ declare module "AlSet" {
     import * as Alina from "alina";
     export class AlSet extends Alina.AlinaComponent {
         lastValue: any;
-        set(value: any): void;
+        setEntry(value: any): void;
     }
 }
 declare module "AlShow" {
