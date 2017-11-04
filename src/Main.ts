@@ -18,4 +18,5 @@ export class AlinaComponent<ContextT extends Alina.Alina = Alina>
 
 export type FuncAlinaComponent<PropsT, RetT> = Alina.FuncComponent<Alina, PropsT, RetT>;
 
-export var Document = new Alina.NodeContext(document, null).ext(Alina.StandardExt);
+let rootNode = typeof(document) === 'undefined' ? null : document;
+export var Document = rootNode && new Alina.NodeContext(rootNode, null).ext(Alina.StandardExt);

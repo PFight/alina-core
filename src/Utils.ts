@@ -46,7 +46,8 @@ export function defaultEmptyFunc(target: Object, propertyKey: string | symbol): 
     let originalGet = descriptor.get;
     let originalSet = descriptor.set;
     descriptor.get = function () {
-      return originalGet.call(this) || empty;
+      let value = originalGet.call(this);
+      return definedNotNull(value) && value || empty;
     };
     descriptor.set = function (val) {
       originalSet.call(this, val);
@@ -56,7 +57,7 @@ export function defaultEmptyFunc(target: Object, propertyKey: string | symbol): 
     delete descriptor.writable;
     let value = null;
     descriptor.get = function () {
-      return value || empty;
+      return definedNotNull(value) && value || empty;
     };
     descriptor.set = function (val) {
       value = val;
