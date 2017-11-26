@@ -2,14 +2,18 @@
   "name": "alina",
   "version": "0.0.1",
   "description": "Reactive html rendering library based on native templates",
-  "main": "src/Index.js",
+  "main": "dist/alina.js",
+  "module": "dist/alina-es.js",
   "scripts": {
     "compile": "tsc -p tsconfig.json",
     "build-dts": "tsc -p tsconfig.dts.json && rm dist/alina",
-    "bundle": "rollup -c rollup-config.js src/alina.js -o dist/alina.js",
+    "bundle": "rollup -c rollup-config.js src/alina.js -o dist/alina-es.js",
+    "bundle-umd": "rollup -c rollup-config-umd.js src/alina.js -o dist/alina-es6.js",
+    "transpile": "tsc dist/alina-es6.js --outFile dist/alina.js --allowJS --target es5 && rm dist/alina-std-es6.js",
     "uglify": "uglifyjs ./dist/alina.js -o ./dist/alina.min.js",
-    "build": "rm -rf dist && npm run compile && npm run build-dts && npm run bundle && npm run uglify",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rm -rf dist && npm run compile && npm run build-dts && npm run bundle && npm run bundle-umd && npm run transpile && npm run uglify && npm run pack",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pack": "rm -f alina-0.0.1.tgz && npm pack"
   },
   "repository": {
     "type": "git",
@@ -26,11 +30,10 @@
   },
   "homepage": "https://github.com/PFight/alina#readme",
   "dependencies": {
-    "rollup-plugin-node-resolve": "^3.0.0",
-    "uglify": "^0.1.5"
   },
   "devDependencies": {
     "uglify-js": "^3.1.6",
-    "uglifyjs": "^2.4.11"
-  }
+    "rollup-plugin-node-resolve": "^3.0.0"
+  },
+  "typings": "dist/alina.d.ts"
 }

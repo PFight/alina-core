@@ -1,4 +1,4 @@
-import * as Alina from "./alina";
+import * as Alina from "../alina";
 
 export class NodeContext {
   protected componentsContext: { [key: string]: any };

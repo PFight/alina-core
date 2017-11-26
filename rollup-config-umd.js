@@ -4,7 +4,7 @@ module.exports = {
   sourceMap: false,
   treeshake: false,
   output: {
-    format: 'es'
+    format: 'umd'
   },
   name: "alina",
   context: 'window',

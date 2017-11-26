@@ -1,4 +1,4 @@
-﻿import * as Alina from "./alina";
+﻿import * as Alina from "../alina";
 
 export class Component<T extends Alina.NodeContext = Alina.NodeContext> {
   constructor(protected root: T) {

@@ -63,7 +63,9 @@ export function defaultEmptyFunc(target: Object, propertyKey: string | symbol): 
       value = val;
     }
   }
-  Object.defineProperty(target, propertyKey, descriptor);
+  Object.defineProperty(target, propertyKey, {
+    
+  });
 }
 
 function empty() {
