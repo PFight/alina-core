@@ -3,6 +3,6 @@
     "compilerOptions": {
         "module": "amd",
         "declaration": true,
-        "outFile": "dist/alina"
+        "outFile": "dist/alina-core"
     }
 }

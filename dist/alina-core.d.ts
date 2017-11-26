@@ -1,4 +1,4 @@
-declare module "alina/Utils" {
+declare module "alina-core/Utils" {
     export function makeTemplate(str: string): HTMLTemplateElement;
     export function fromTemplate(templateElem: HTMLTemplateElement): Node;
     export function definedNotNull(x: any): boolean;
@@ -12,8 +12,8 @@ declare module "alina/Utils" {
     }
     export function defaultEmptyFunc(target: Object, propertyKey: string | symbol): void;
 }
-declare module "alina/NodeContext" {
-    import * as Alina from "alina";
+declare module "alina-core/NodeContext" {
+    import * as Alina from "alina-core";
     export class NodeContext {
         protected componentsContext: {
             [key: string]: any;
@@ -60,8 +60,8 @@ declare module "alina/NodeContext" {
         idlName?: string;
     }
 }
-declare module "alina/Component" {
-    import * as Alina from "alina";
+declare module "alina-core/Component" {
+    import * as Alina from "alina-core";
     export class Component<T extends Alina.NodeContext = Alina.NodeContext> {
         protected root: T;
         constructor(root: T);
@@ -73,17 +73,17 @@ declare module "alina/Component" {
     }
     export type FuncComponent<ContextT, PropsT, RetT> = (root: ContextT, props: PropsT) => RetT;
 }
-declare module "alina/Main" {
-    import * as Alina from "alina";
+declare module "alina-core/Main" {
+    import * as Alina from "alina-core";
     export type Alina = Alina.NodeContext;
     export class AlinaComponent<ContextT extends Alina.Alina = Alina> extends Alina.Component<ContextT> {
     }
     export type FuncAlinaComponent<PropsT, RetT> = Alina.FuncComponent<Alina, PropsT, RetT>;
     export var Document: Alina.NodeContext;
 }
-declare module "alina" {
-    export * from "alina/Utils";
-    export * from "alina/NodeContext";
-    export * from "alina/Component";
-    export * from "alina/Main";
+declare module "alina-core" {
+    export * from "alina-core/Utils";
+    export * from "alina-core/NodeContext";
+    export * from "alina-core/Component";
+    export * from "alina-core/Main";
 }

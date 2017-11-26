@@ -1,4 +1,4 @@
-﻿import * as Alina from "../alina";
+﻿import * as Alina from "../alina-core";
 
 export type Alina = Alina.NodeContext;
 

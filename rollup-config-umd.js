@@ -1,16 +1,4 @@
-var nodeResolve = require('rollup-plugin-node-resolve');
+var config = require("./rollup-config.js");
 
-module.exports = {
-  sourceMap: false,
-  treeshake: false,
-  output: {
-    format: 'umd'
-  },
-  name: "alina",
-  context: 'window',
-  plugins: [
-    nodeResolve({
-        jsnext: true, main: true, module: true, browser: true
-    })
-  ]
-};
+config.output.format = 'umd';
+module.exports = config;
